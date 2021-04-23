@@ -9,7 +9,7 @@ The Approov integration is available via [`cocoapods`](https://cocoapods.org/). 
 target 'YourApplication' do
     use_frameworks!
     platform :ios, '10.0'
-    pod 'approov-service-urlsession', '2.6.1', :source => "https://github.com/approov/approov-service-urlsession.git"
+    pod 'approov-service-alamofire', '2.6.1', :source => "https://github.com/approov/approov-service-alamofire.git"
     pod 'approov-ios-sdk', '2.6.1', :source => "https://github.com/approov/approov-ios-sdk.git"
     pod 'Alamofire', '~> 5.1'
 end
@@ -104,3 +104,19 @@ The `ApproovInterceptor` class implements Alamofire's Interceptor protocol which
 
 ### Network Delegate
 Unfortunately we do not support network delegates in Alamofire. If you wish to use a network delegate and do not mind using apple's URLSession interface, we can offer an `ApproovURLSession` integration that does support network delegates.
+
+## Bitcode Support
+It is possible to use bitcode enabled Approov SDK by providing a slightly different `Podfile` in your test app:
+
+```
+target 'YourApplication' do
+    use_frameworks!
+    platform :ios, '10.0'
+    pod 'approov-service-alamofire', '2.6.1-bitcode', :source => "https://github.com/approov/approov-service-alamofire.git"
+    pod 'approov-ios-sdk-bitcode', '2.6.1', :source => "https://github.com/approov/approov-ios-sdk-bitcode.git"
+    pod 'Alamofire', '~> 5.1'
+end
+```
+
+Note the changes in the `tag` name of the approov service and also the use of a different repository for the Approov SDK. The wrapper code is the same for both native and bitcode versions of the Approov SDK, only the pod dependency changes. 
+Please, also remember to use the `-bitcode` flag when using the Approov [admin tools](https://www.approov.io/docs/v2.5/approov-installation/#approov-tool) to register your application with the Approov service.
