@@ -200,10 +200,6 @@ final class ApproovInterceptor:  RequestInterceptor {
     public static let kApproovInitialKey = "approov-initial"
     /* Initial configuration file extention for Approov SDK */
     public static let kConfigFileExtension = "config"
-    /* Approov token default header */
-    private static let kApproovTokenHeader = "Approov-Token"
-    /* Approov token custom prefix: any prefix to be added such as "Bearer " */
-    private static var approovTokenPrefix = ""
     /* Status of Approov SDK initialisation */
     private static var approovSDKInitialised = false
     
@@ -257,6 +253,27 @@ final class ApproovInterceptor:  RequestInterceptor {
         }
         set {
             bindHeaderQueue.async(group: nil, qos: .default, flags: .barrier, execute: {self._bindHeader = newValue})
+        }
+    }
+
+    // Dispatch queue to manage concurrent access to approovTokenHeader variable
+    private static let approovTokenHeaderAndPrefixQueue = DispatchQueue(label: "ApproovSDK.approovTokenHeader", qos: .default, attributes: .concurrent, autoreleaseFrequency: .never, target: DispatchQueue.global())
+    /* Approov token default header */
+    private static var _approovTokenHeader = "Approov-Token"
+    /* Approov token custom prefix: any prefix to be added such as "Bearer " */
+    private static var _approovTokenPrefix = ""
+    // Approov Token Header String
+    public static var approovTokenHeaderAndPrefix: (String,String) {
+        get {
+            var approovTokenHeader = ""
+            approovTokenHeaderAndPrefixQueue.sync {
+                approovTokenHeader = _approovTokenHeader
+                approovTokenPrefix = _approovTokenPrefix
+        }
+        return (approovTokenHeader,approovTokenPrefix)
+        }
+        set {
+            approovTokenHeaderAndPrefixQueue.async(group: nil, qos: .default, flags: .barrier, execute: {(_approovTokenHeader,_approovTokenPrefix) = newValue})
         }
     }
     
@@ -355,7 +372,7 @@ final class ApproovInterceptor:  RequestInterceptor {
                 // Can go ahead and make the API call with the provided request object
                 returnData.decision = .ShouldProceed
                 // Set Approov-Token header
-                returnData.request.setValue(ApproovInterceptor.approovTokenPrefix + approovResult.token, forHTTPHeaderField: ApproovInterceptor.kApproovTokenHeader)
+                returnData.request.setValue(ApproovInterceptor.approovTokenPrefix + approovResult.token, forHTTPHeaderField: ApproovInterceptor.approovTokenHeader)
             case ApproovTokenFetchStatus.noNetwork,
                  ApproovTokenFetchStatus.poorNetwork,
                  ApproovTokenFetchStatus.mitmDetected:
