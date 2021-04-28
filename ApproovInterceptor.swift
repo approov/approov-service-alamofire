@@ -266,6 +266,7 @@ final class ApproovInterceptor:  RequestInterceptor {
     public static var approovTokenHeaderAndPrefix: (approovTokenHeader: String, approovTokenPrefix: String) {
         get {
             var approovTokenHeader = ""
+            var approovTokenPrefix = ""
             approovTokenHeaderAndPrefixQueue.sync {
                 approovTokenHeader = _approovTokenHeader
                 approovTokenPrefix = _approovTokenPrefix
