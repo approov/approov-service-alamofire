@@ -263,7 +263,7 @@ final class ApproovInterceptor:  RequestInterceptor {
     /* Approov token custom prefix: any prefix to be added such as "Bearer " */
     private static var _approovTokenPrefix = ""
     // Approov Token Header String
-    public static var approovTokenHeaderAndPrefix: (String,String) {
+    public static var approovTokenHeaderAndPrefix: (approovTokenHeader: String, approovTokenPrefix: String) {
         get {
             var approovTokenHeader = ""
             approovTokenHeaderAndPrefixQueue.sync {
