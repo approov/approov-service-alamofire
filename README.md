@@ -27,13 +27,13 @@ $ approov sdk -getConfig approov-initial.config
 The `approov-initial.config` file must then be included in you application bundle and automatically loaded by the Approov SDK. It is possible to change the filename and also include the configuration string as a variable by overriding/modifying the `ApproovInterceptor` class variables in the `ApproovInterceptor.swift` file.
 
 ## Approov Token Header
-The default header name of `Approov-Token` can be changed by modifying the variable `kApproovTokenHeader` in `ApproovInterceptor.swift` file:
+The default header name of `Approov-Token` can be changed by setting the variable `ApproovInterceptor.approovTokenHeaderAndPrefix` like so:
 
 ```swift
-private static let kApproovTokenHeader = "Approov-Token"
+ApproovInterceptor.approovTokenHeaderAndPrefix = (approovTokenHeader: "Authorization", approovTokenPrefix: "Bearer ")
 ```
 
-You may like to change the above value to `Authorization` and prefix the actual Approov JWT Token with `Bearer ` and make use of the resulting header in your integration.
+This will result in the Approov JWT token being appended to the `Bearer ` value of the `Authorization` header allowing your back end solution to reuse any code relying in `Authorization` header.
 
 ## Token Binding
 The Approov SDK allows any string value to be bound to a particular token by computing its SHA256 hash and placing its base64 encoded value inside the `pay` claim of the JWT token. The property `ApproovInterceptor.bindHeader` takes the name of the header holding the value to be bound. This only needs to be called once but the header needs to be present on all API requests using Approov. It is also crucial to set the `ApproovInterceptor.bindHeader` property before any token fetch occurs, like token prefetching being enabled in the `ApproovSession` constructor, since setting the value to be bound invalidates any (pre)fetched token.
