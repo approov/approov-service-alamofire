@@ -372,7 +372,7 @@ final class ApproovInterceptor:  RequestInterceptor {
                 // Can go ahead and make the API call with the provided request object
                 returnData.decision = .ShouldProceed
                 // Set Approov-Token header
-                returnData.request.setValue(ApproovInterceptor.approovTokenPrefix + approovResult.token, forHTTPHeaderField: ApproovInterceptor.approovTokenHeader)
+                returnData.request.setValue(ApproovInterceptor.approovTokenHeaderAndPrefix.approovTokenPrefix + approovResult.token, forHTTPHeaderField: ApproovInterceptor.approovTokenHeaderAndPrefix.approovTokenHeader)
             case ApproovTokenFetchStatus.noNetwork,
                  ApproovTokenFetchStatus.poorNetwork,
                  ApproovTokenFetchStatus.mitmDetected:
