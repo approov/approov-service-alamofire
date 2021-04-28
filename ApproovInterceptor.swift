@@ -469,6 +469,25 @@ public class ApproovSession: Session {
                    cachedResponseHandler: cachedResponseHandler,
                    eventMonitors: eventMonitors)
     }
+
+    // Bind Header string
+    public static var bindHeader: String {
+        get {
+            ApproovInterceptor.bindHeader
+        }
+        set {
+            ApproovInterceptor.bindHeader = newValue
+        }
+    }
+    // Approov Token Header and Prefix
+    public static var approovTokenHeaderAndPrefix: (approovTokenHeader: String, approovTokenPrefix: String) {
+        get {
+            ApproovInterceptor.approovTokenHeaderAndPrefix
+        }
+        set {
+            ApproovInterceptor.approovTokenHeaderAndPrefix = newValue
+        }
+    }
 }
 
 
