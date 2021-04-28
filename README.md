@@ -119,4 +119,4 @@ end
 ```
 
 Note the changes in the `tag` name of the approov service and also the use of a different repository for the Approov SDK. The wrapper code is the same for both native and bitcode versions of the Approov SDK, only the pod dependency changes. 
-Please, also remember to use the `-bitcode` flag when using the Approov [admin tools](https://www.approov.io/docs/v2.5/approov-installation/#approov-tool) to register your application with the Approov service.
+Please, also remember to use the `-bitcode` flag when using the Approov [admin tools](https://www.approov.io/docs/latest/approov-installation/#approov-tool) to register your application with the Approov service.
