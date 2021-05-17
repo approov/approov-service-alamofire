@@ -3,17 +3,10 @@
 A wrapper for the [Approov SDK](https://github.com/approov/approov-ios-sdk) to enable easy integration when using [`Alamofire`](https://github.com/Alamofire/Alamofire) for making the API calls that you wish to protect with Approov. In order to use this you will need a trial or paid [Approov](https://www.approov.io) account.
 
 ## Adding ApproovService Dependency
-The Approov integration is available via [`cocoapods`](https://cocoapods.org/). This allows inclusion into the project by simply specifying a dependency in the `Podfile` for the app:
+The Approov integration is available via [`swift package manager`](https://developer.apple.com/documentation/swift_packages/adding_package_dependencies_to_your_app). This allows inclusion into the project by simply specifying a dependency in the `Add Package Dependency` Xcode option:
 
-```
-target 'YourApplication' do
-    use_frameworks!
-    platform :ios, '10.0'
-    pod 'approov-service-alamofire', '2.6.1', :source => "https://github.com/approov/approov-service-alamofire.git"
-    pod 'approov-ios-sdk', '2.6.1', :source => "https://github.com/approov/approov-ios-sdk.git"
-    pod 'Alamofire', '~> 5.1'
-end
-```
+![Add Package Dependency](readme-images/AddPackage.png)
+
 
 This package is actually an open source wrapper layer that allows you to easily use Approov with `Alamofire`. This has a further dependency to the closed source [Approov SDK](https://github.com/approov/approov-ios-sdk).
 
@@ -101,17 +94,5 @@ all you will need to do to use Approov is to replace the default Session object 
 Unfortunately we do not support network delegates in Alamofire. If you wish to use a network delegate and do not mind using apple's URLSession interface, we can offer an `ApproovURLSession` integration that does support network delegates.
 
 ## Bitcode Support
-It is possible to use bitcode enabled Approov SDK by providing a slightly different `Podfile` in your test app:
-
-```
-target 'YourApplication' do
-    use_frameworks!
-    platform :ios, '10.0'
-    pod 'approov-service-alamofire', '2.6.1-bitcode', :source => "https://github.com/approov/approov-service-alamofire.git"
-    pod 'approov-ios-sdk-bitcode', '2.6.1', :source => "https://github.com/approov/approov-ios-sdk-bitcode.git"
-    pod 'Alamofire', '~> 5.1'
-end
-```
-
-Note the changes in the `tag` name of the approov service and also the use of a different repository for the Approov SDK. The wrapper code is the same for both native and bitcode versions of the Approov SDK, only the pod dependency changes. 
+It is possible to use bitcode enabled Approov SDK by making use of the tags ending in `bitcode`. The underlying codebase is the same but the `binaryTarget` points to a bitcode enabled Approov SDK.
 Please, also remember to use the `-bitcode` flag when using the Approov [admin tools](https://www.approov.io/docs/latest/approov-installation/#approov-tool) to register your application with the Approov service.
