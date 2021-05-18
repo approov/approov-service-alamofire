@@ -14,7 +14,7 @@ let package = Package(
     dependencies: [
         // Here we define our package's external dependencies
         // and from where they can be fetched:
-        .package(url: "https://github.com/Alamofire/Alamofire.git", .upToNextMajor(from: "5.2.0"))
+        .Package(url: "https://github.com/Alamofire/Alamofire.git", .upToNextMajor(from: "5.2.0"))
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
