@@ -203,15 +203,18 @@ final class ApproovInterceptor:  RequestInterceptor {
     /* Status of Approov SDK initialisation */
     private static var approovSDKInitialised = false
     
-    init?(prefetchToken: Bool = false){
+    init?(prefetchToken: Bool = false, config: String? = nil){
         if !ApproovInterceptor.approovSDKInitialised {
-            var configString: String?
-            /* Read initial config */
-            do {
-                configString = try readInitialApproovConfig()
-            } catch let error {
-                debugPrint(error.localizedDescription)
-                return nil
+            var configString = config
+            // Read initial config file ONLY if short config not provided
+            if configString == nil {
+                /* Read initial config */
+                do {
+                    configString = try readInitialApproovConfig()
+                } catch let error {
+                    debugPrint(error.localizedDescription)
+                    return nil
+                }
             }
             /* Read dynamic config */
             if configString != nil {
@@ -358,8 +361,9 @@ final class ApproovInterceptor:  RequestInterceptor {
         }
         // Invoke fetch token sync
         let approovResult = Approov.fetchTokenAndWait(request.url!.absoluteString)
-        // Log the result
-        NSLog("Approov: Approov token for host: %@ : %@", request.url!.host!, approovResult.loggableToken())
+        // Log result of token fetch
+        let aHostname = hostnameFromURL(url: request.url!)
+        print("Approov: Approov token for host: \(aHostname) : \(approovResult.loggableToken())")
         if approovResult.isConfigChanged {
             // Store dynamic config file if a change has occurred
             if let newConfig = Approov.fetchConfig() {
@@ -430,6 +434,7 @@ public enum ApproovError: Error {
 public class ApproovSession: Session {
     
     public init?(prefetchToken: Bool = false,
+                 configString: String? = nil,
                 configuration: URLSessionConfiguration = URLSessionConfiguration.af.default,
                 rootQueue: DispatchQueue = DispatchQueue(label: "org.criticalblue.session.rootQueue"),
                 startRequestsImmediately: Bool = true,
@@ -440,7 +445,7 @@ public class ApproovSession: Session {
                 cachedResponseHandler: CachedResponseHandler? = nil,
                 eventMonitors: [EventMonitor] = []) {
         
-        guard let interceptor = ApproovInterceptor(prefetchToken: prefetchToken) else {
+        guard let interceptor = ApproovInterceptor(prefetchToken: prefetchToken, config: configString) else {
             return nil
         }
         /* User provided trust manager or we provide a default one */
@@ -491,3 +496,20 @@ public class ApproovSession: Session {
 }
 
 
+/*  Host component only gets resolved if the string includes the protocol used
+ *  This is not always the case when making requests so a convenience method is needed
+ *
+ */
+func hostnameFromURL(url: URL) -> String {
+    if url.absoluteString.starts(with: "https") {
+        return url.host!
+    } else {
+        let fullHost = "https://" + url.absoluteString
+        let newURL = URL(string: fullHost)
+        if let host = newURL?.host {
+            return host
+        } else {
+            return ""
+        }
+    }
+}

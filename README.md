@@ -14,10 +14,37 @@ This package is actually an open source wrapper layer that allows you to easily 
 The `ApproovSession` class extends the [Session](https://alamofire.github.io/Alamofire/Classes/Session.html) class defined by Alamofire and handles connections by providing pinning and including an additional ApproovSDK attestation call. The simplest way to use the `ApproovSession` class is to find and replace all the `Session` instances with `ApproovSession`. Additionaly, the Approov SDK needs to be initialized before use. As mentioned above, you will need a paid or trial account for [Approov](https://www.approov.io). Using the command line tools:
 
 ```
-$ approov sdk -getConfig approov-initial.config
+$ approov sdk -getConfigString
 ```
 
-The `approov-initial.config` file must then be included in you application bundle and automatically loaded by the Approov SDK. 
+This will output a configuration string, something like `#123456#K/XPlLtfcwnWkzv99Wj5VmAxo4CrU267J1KlQyoz8Qo=`, that will identify your Approov account. Use this configuration string as an additional parameter when initializing the `ApproovSession`, like so:
+
+```swift
+let session = ApproovSession(configString: "#123456#K/XPlLtfcwnWkzv99Wj5VmAxo4CrU267J1KlQyoz8Qo=")
+```
+
+
+## Bitcode Support
+It is possible to use bitcode enabled Approov SDK by making use of the tags ending in `bitcode`. The underlying codebase is the same but the `binaryTarget` points to a bitcode enabled Approov SDK.
+Please, also remember to use the `-bitcode` flag when using the Approov [admin tools](https://www.approov.io/docs/latest/approov-installation/#approov-tool) to register your application with the Approov service.
+
+## Discovery Mode
+
+If you are performing a quick assessment of the environments that you app is running in, and also if there are any requests being made that are not emanating from your apps, then you can use discovery mode. This is a minimal implementation of Approov that doesn't automatically check Approov tokens at the backend. Requesting the Approov tokens in your apps gathers metrics. Once you have pushed the version of the app using Approov to all of your users you can do an informal check using logs of your backend requests to see if there are any requests that are not presenting an Approov token.
+
+Setting up Approov to work in this way is extremely simple. You must enabled the wildcard option on your account as follows:
+
+```
+approov api -setWildcardMode on
+```
+
+This ensures that Approov will provide an Approov token for every API request being made, without having to specifically add API domains. The Approov token will be added as an `Approov-Token` header for all requests that are made via an `ApproovURLSession`.
+
+These Approov tokens will not be valid are are simply provided to assess if they are reaching your backend API or not. Since they are not valid they do not need to be protected via pinning and thus none is applied by Approov. Furthermore, if you are only performing discovery you do not need to register your apps.
+
+It is possible to see the properties of all of your running apps using [metrics graphs](https://approov.io/docs/latest/approov-usage-documentation/#metrics-graphs). You can also [assess the validity](https://approov.io/docs/latest/approov-usage-documentation/#checking-token-validity) of individual Approov tokens if required.
+
+Remember to [switch](https://approov.io/docs/latest/approov-usage-documentation/#setting-wildcard-mode) to `off` again before completing a full Approov integration.
 
 ## Approov Token Header
 The default header name of `Approov-Token` can be changed by setting the variable `ApproovSession.approovTokenHeaderAndPrefix` like so:
@@ -92,7 +119,3 @@ all you will need to do to use Approov is to replace the default Session object 
 
 ### Network Delegate
 Unfortunately we do not support network delegates in Alamofire. If you wish to use a network delegate and do not mind using apple's URLSession interface, we can offer an `ApproovURLSession` integration that does support network delegates.
-
-## Bitcode Support
-It is possible to use bitcode enabled Approov SDK by making use of the tags ending in `bitcode`. The underlying codebase is the same but the `binaryTarget` points to a bitcode enabled Approov SDK.
-Please, also remember to use the `-bitcode` flag when using the Approov [admin tools](https://www.approov.io/docs/latest/approov-installation/#approov-tool) to register your application with the Approov service.
