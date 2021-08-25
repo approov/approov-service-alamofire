@@ -180,8 +180,12 @@ public class ApproovTrustManager: ServerTrustManager {
     public override func serverTrustEvaluator(forHost host: String) throws -> ServerTrustEvaluating? {
         if let approovCertHashes = Approov.getPins(pinType){
             let allHosts = approovCertHashes.keys
-            /* Get protected api hosts from current configration and check if `host` should be protected */
+            /* Get protected api hosts from current configration and check if `host` should be protected
+             * Note that is also possible to have defined a host but not set any pins, in which case
+             * we treat the host as not protected by Approov and we forward the trust evaluation
+             */
             if allHosts.contains(host) {
+                // Check if host has set pins
                 return ApproovTrustEvaluator()
             }
         }

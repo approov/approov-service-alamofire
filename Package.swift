@@ -1,7 +1,7 @@
 // swift-tools-version:5.3
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 import PackageDescription
-let releaseTAG = "2.7.0"
+let releaseTAG = "2.7.1"
 let package = Package(
     name: "ApproovInterceptor",
     platforms: [.iOS(.v10)],
