@@ -185,8 +185,10 @@ public class ApproovTrustManager: ServerTrustManager {
              * we treat the host as not protected by Approov and we forward the trust evaluation
              */
             if allHosts.contains(host) {
-                // Check if host has set pins
-                return ApproovTrustEvaluator()
+                // Check if host has at least one set of pins
+                if approovCertHashes[host]!.count > 0 {
+                    return ApproovTrustEvaluator()
+                }
             }
         }
         
