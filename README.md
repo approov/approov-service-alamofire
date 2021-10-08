@@ -2,6 +2,7 @@
 
 A wrapper for the [Approov SDK](https://github.com/approov/approov-ios-sdk) to enable easy integration when using [`Alamofire`](https://github.com/Alamofire/Alamofire) for making the API calls that you wish to protect with Approov. In order to use this you will need a trial or paid [Approov](https://www.approov.io) account.
 
+
 ## Adding ApproovService Dependency
 The Approov integration is available via [`swift package manager`](https://developer.apple.com/documentation/swift_packages/adding_package_dependencies_to_your_app). This allows inclusion into the project by simply specifying a dependency in the `Add Package Dependency` Xcode option:
 
@@ -119,3 +120,5 @@ all you will need to do to use Approov is to replace the default Session object 
 
 ### Network Delegate
 Unfortunately we do not support network delegates in Alamofire. If you wish to use a network delegate and do not mind using apple's URLSession interface, we can offer an `ApproovURLSession` integration that does support network delegates.
+=======
+Please follow the [Quickstart](https://github.com/approov/quickstart-ios-swift-alamofire) for instructions on usage.
