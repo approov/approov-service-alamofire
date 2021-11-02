@@ -119,6 +119,7 @@ all you will need to do to use Approov is to replace the default Session object 
 ```
 
 ### Network Delegate
+
 Unfortunately we do not support network delegates in Alamofire. If you wish to use a network delegate and do not mind using apple's URLSession interface, we can offer an `ApproovURLSession` integration that does support network delegates.
-=======
+
 Please follow the [Quickstart](https://github.com/approov/quickstart-ios-swift-alamofire) for instructions on usage.
