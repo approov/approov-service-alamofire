@@ -8,6 +8,9 @@ The Approov integration is available via [`swift package manager`](https://devel
 
 ![Add Package Dependency](readme-images/AddPackage.png)
 
+You should select the apropriate SDK version i.e. 2.9.0 which matches the `Exact version` option in the next screen.
+
+![SDK Version](readme-images/SDKVersion.png)
 
 This package is actually an open source wrapper layer that allows you to easily use Approov with `Alamofire`. This has a further dependency to the closed source [Approov SDK](https://github.com/approov/approov-ios-sdk).
 
