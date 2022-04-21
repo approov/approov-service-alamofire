@@ -95,8 +95,8 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
                     if approovCertHashes["*"] == nil {
                         return true  // We do not pin connection explicitly setting no pins for the host
                     } else {
-                    // there are no pins for current host, then we try and use any managed trust roots since "*" is available
-                    actualCertHashList = approovCertHashes["*"]!
+                        // there are no pins for current host, then we try and use any managed trust roots since "*" is available
+                        actualCertHashList = approovCertHashes["*"]!
                     }
                 }
                 // We have one or more cert hashes matching the receivers host, compare them
@@ -194,8 +194,8 @@ public class ApproovTrustManager: ServerTrustManager {
              * we treat the host as not protected by Approov and we forward the trust evaluation
              */
             if allHosts.contains(host) {
-                // Check if host has at least one set of pins
-                if approovCertHashes[host]!.count > 0 {
+                // Check if host has at least one set of pins OR Managed Trust Root is enabled
+                if (approovCertHashes[host]!.count > 0) || (allHosts.contains("*")) {
                     return ApproovTrustEvaluator()
                 }
             }
@@ -227,8 +227,8 @@ private class ApproovInterceptor:  RequestInterceptor {
 // The Approov Service class wrapper for the native Approov SDK
 
 public class ApproovService {
-    /* Private initializer */
-    fileprivate init(){}
+    /* Private initializer unavailable */
+    private init(){}
     /* Approov config string used to intialize the Interceptor */
     private static var approovConfigStringUsed:String?
     /* The dispatch queue to manage serial access to intializer modified variables */
