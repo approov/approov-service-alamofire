@@ -208,9 +208,29 @@ public class ApproovTrustManager: ServerTrustManager {
 /*  See https://alamofire.github.io/Alamofire/Protocols/RequestInterceptor.html
  *
  */
-final class ApproovInterceptor:  RequestInterceptor {
+public class ApproovInterceptor:  RequestInterceptor {
+    
+    /*  Alamofire interceptor protocol
+     *https://github.com/Alamofire/Alamofire/blob/master/Documentation/AdvancedUsage.md#adapting-and-retrying-requests-with-requestinterceptor
+     */
+    public func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {
+        let approovData = ApproovService.fetchApproovToken(request: urlRequest)
+        if approovData.decision == .ShouldProceed {
+            completion(.success(approovData.request))
+        } else {    // .ShouldRetry or .ShouldFail
+            completion(.failure(approovData.error!))
+        }
+    }
+}
+
+
+// The Approov Service class wrapper for the native Approov SDK
+
+public class ApproovService {
+    /* Private initializer */
+    fileprivate init(){}
     /* Approov config string used to intialize the Interceptor */
-    var approovConfigStringUsed:String?
+    private static var approovConfigStringUsed:String?
     /* The dispatch queue to manage serial access to intializer modified variables */
     private static let initializerQueue = DispatchQueue(label: "ApproovService.initializer")
     /* Status of Approov SDK initialisation */
@@ -221,15 +241,15 @@ final class ApproovInterceptor:  RequestInterceptor {
     /* The dispatch queue to manage serial access to the substitution headers dictionary */
     private static let substitutionQueue = DispatchQueue(label: "ApproovInterceptor.substitution")
     /* Use log subsystem for info/error */
-    let log = OSLog(subsystem: "approov-service-alamofire", category: "network")
-    // TODO: should this throw or just return nil and log?
-    init(prefetch: Bool = false, config: String? = nil) throws {
+    private static let log = OSLog(subsystem: "approov-service-alamofire", category: "network")
+    // initializes the ApproovService using a config string
+    public static func initialize(prefetch: Bool = false, config: String? = nil) throws {
         do {
-            try ApproovInterceptor.initializerQueue.sync  {
-                if ApproovInterceptor.approovSDKInitialised {
+            try ApproovService.initializerQueue.sync  {
+                if ApproovService.approovSDKInitialised {
                     // We have initialized already, just check if using different config string
                     if config != nil {
-                        if config != approovConfigStringUsed {
+                        if config != ApproovService.approovConfigStringUsed {
                             throw ApproovError.initializationError(message: "ApproovInterceptor already initialized with different config")
                         }
                         // We have initialized already, we need another interceptor instance
@@ -244,9 +264,9 @@ final class ApproovInterceptor:  RequestInterceptor {
                     do {
                         try Approov.initialize(config!, updateConfig: "auto", comment: nil)
                         Approov.setUserProperty("approov-service-alamofire")
-                        ApproovInterceptor.approovSDKInitialised = true
+                        ApproovService.approovSDKInitialised = true
                         if prefetch {
-                            prefetchApproovToken()
+                            ApproovService.prefetch()
                         }
                     } catch let error {
                         throw ApproovError.initializationError(message: "Approov: Error initializing Approov SDK: \(error.localizedDescription)")
@@ -305,8 +325,8 @@ final class ApproovInterceptor:  RequestInterceptor {
     *  or is awaiting user input. Since the initial token fetch is the most
     *  expensive the prefetch seems reasonable.
     */
-    func prefetchApproovToken() {
-        if ApproovInterceptor.approovSDKInitialised {
+    private static func prefetch() {
+        if ApproovService.approovSDKInitialised {
             // We succeeded initializing Approov SDK, fetch a token
             Approov.fetchToken({(approovResult: ApproovTokenFetchResult) in
                 // Prefetch done, no need to process response
@@ -324,14 +344,14 @@ final class ApproovInterceptor:  RequestInterceptor {
      * @param header is the header to be marked for substitution
      * @param prefix is any required prefix to the value being substituted or nil if not required
      */
-     static func addSubstitutionHeader(header: String, prefix: String?) {
+     public static func addSubstitutionHeader(header: String, prefix: String?) {
         if prefix == nil {
-            ApproovInterceptor.substitutionQueue.sync {
-                ApproovInterceptor.substitutionHeaders[header] = ""
+            ApproovService.substitutionQueue.sync {
+                ApproovService.substitutionHeaders[header] = ""
             }
         } else {
-            ApproovInterceptor.substitutionQueue.sync {
-                ApproovInterceptor.substitutionHeaders[header] = prefix
+            ApproovService.substitutionQueue.sync {
+                ApproovService.substitutionHeaders[header] = prefix
             }
         }
     }
@@ -339,10 +359,10 @@ final class ApproovInterceptor:  RequestInterceptor {
     /*
      * Removes the name of a header if it exists from the secure strings substitution dictionary.
      */
-     static func removeSubstitutionHeader(header: String) {
-        ApproovInterceptor.substitutionQueue.sync {
-            if ApproovInterceptor.substitutionHeaders[header] != nil {
-                ApproovInterceptor.substitutionHeaders.removeValue(forKey: header)
+     public static func removeSubstitutionHeader(header: String) {
+         ApproovService.substitutionQueue.sync {
+            if ApproovService.substitutionHeaders[header] != nil {
+                ApproovService.substitutionHeaders.removeValue(forKey: header)
             }
         }
     }
@@ -351,19 +371,19 @@ final class ApproovInterceptor:  RequestInterceptor {
      *  Convenience function fetching the Approov token
      *
      */
-    fileprivate func fetchApproovToken(request: URLRequest) -> ApproovData {
+    fileprivate static func fetchApproovToken(request: URLRequest) -> ApproovData {
         var returnData = ApproovData(request: request, decision: .ShouldFail, statusMessage: "", error: nil)
         // Check if Bind Header is set to a non empty String
-        if ApproovInterceptor.bindHeader != "" {
+        if ApproovService.bindHeader != "" {
             /*  Query the URLSessionConfiguration for user set headers. They would be set like so:
              *  config.httpAdditionalHeaders = ["Authorization Bearer" : "token"]
              *  Since the URLSessionConfiguration is part of the init call and we store its reference
              *  we check for the presence of a user set header there.
              */
-            if let aValue = request.value(forHTTPHeaderField: ApproovInterceptor.bindHeader) {
+            if let aValue = request.value(forHTTPHeaderField: ApproovService.bindHeader) {
                 // Add the Bind Header as a data hash to Approov token
                 Approov.setDataHashInToken(aValue)
-            } 
+            }
         }
         // Invoke fetch token sync
         let approovResult = Approov.fetchTokenAndWait(request.url!.absoluteString)
@@ -377,7 +397,7 @@ final class ApproovInterceptor:  RequestInterceptor {
                 // Can go ahead and make the API call with the provided request object
                 returnData.decision = .ShouldProceed
                 // Set Approov-Token header
-                returnData.request.setValue(ApproovInterceptor.approovTokenHeaderAndPrefix.approovTokenPrefix + approovResult.token, forHTTPHeaderField: ApproovInterceptor.approovTokenHeaderAndPrefix.approovTokenHeader)
+                returnData.request.setValue(ApproovService.approovTokenHeaderAndPrefix.approovTokenPrefix + approovResult.token, forHTTPHeaderField: ApproovService.approovTokenHeaderAndPrefix.approovTokenHeader)
             case ApproovTokenFetchStatus.noNetwork,
                  ApproovTokenFetchStatus.poorNetwork,
                  ApproovTokenFetchStatus.mitmDetected:
@@ -405,9 +425,9 @@ final class ApproovInterceptor:  RequestInterceptor {
         if let requestHeaders = returnData.request.allHTTPHeaderFields {
             // Make a copy of the original request so we can modify it
             var replacementRequest = returnData.request
-            for (key, _) in ApproovInterceptor.substitutionHeaders {
+            for (key, _) in ApproovService.substitutionHeaders {
                 let header = key
-                if let prefix = ApproovInterceptor.substitutionHeaders[key] {
+                if let prefix = ApproovService.substitutionHeaders[key] {
                     if let value = requestHeaders[header]{
                         // Check if the request contains the header we want to replace
                         if ((value.hasPrefix(prefix)) && (value.count > prefix.count)){
@@ -481,7 +501,7 @@ final class ApproovInterceptor:  RequestInterceptor {
          * @return secure string (should not be cached by your app) or nil if it was not defined or an error ocurred
          * @throws exception with description of cause
          */
-         static func fetchSecureString(key: String, newDef: String?) throws -> String? {
+         public static func fetchSecureString(key: String, newDef: String?) throws -> String? {
             // determine the type of operation as the values themselves cannot be logged
             var type = "lookup"
             if newDef == nil {
@@ -526,7 +546,7 @@ final class ApproovInterceptor:  RequestInterceptor {
          * @return custom JWT string or nil if an error occurred
          * @throws exception with description of cause
          */
-         static func fetchCustomJWT(payload: String) throws -> String? {
+         public static func fetchCustomJWT(payload: String) throws -> String? {
             // fetch the custom JWT
             let approovResult = Approov.fetchCustomJWTAndWait(payload)
             // log result of token fetch operation but do not log the value
@@ -562,7 +582,7 @@ final class ApproovInterceptor:  RequestInterceptor {
          * allow a retry operation to be performed and finally if some other error occurs an
          * ApproovError.permanentError is raised.
          */
-        static func precheck() throws {
+        public static func precheck() throws {
             // try to fetch a non-existent secure string in order to check for a rejection
             let approovResults = Approov.fetchSecureStringAndWait("precheck-dummy-key", nil)
             // process the returned Approov status
@@ -580,18 +600,6 @@ final class ApproovInterceptor:  RequestInterceptor {
                 throw ApproovError.permanentError(message: "precheck: " + Approov.string(from: approovResults.status))
             }
         }
-    
-    /*  Alamofire interceptor protocol
-     *https://github.com/Alamofire/Alamofire/blob/master/Documentation/AdvancedUsage.md#adapting-and-retrying-requests-with-requestinterceptor
-     */
-    func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {
-        let approovData = fetchApproovToken(request: urlRequest)
-        if approovData.decision == .ShouldProceed {
-            completion(.success(approovData.request))
-        } else {    // .ShouldRetry or .ShouldFail
-            completion(.failure(approovData.error!))
-        }
-    }
 }
 
 /*
@@ -611,9 +619,7 @@ public enum ApproovError: Error {
  *  and delegate support you can use the ApproovURLSession class
  */
 public class ApproovSession: Session {
-    // TODO: should this NOT trhow? How do we deal with init failures in the interceptor init?
-    public init?(prefetchToken: Bool = false,
-                 configString: String? = nil,
+    public init?(
                 configuration: URLSessionConfiguration = URLSessionConfiguration.af.default,
                 rootQueue: DispatchQueue = DispatchQueue(label: "approov.service.alamofire.rootQueue"),
                 startRequestsImmediately: Bool = true,
@@ -624,8 +630,7 @@ public class ApproovSession: Session {
                 cachedResponseHandler: CachedResponseHandler? = nil,
                 eventMonitors: [EventMonitor] = []) {
         
-        do {
-            let interceptor = try ApproovInterceptor(prefetch: prefetchToken, config: configString)
+            let interceptor = ApproovInterceptor()
             
             /* User provided trust manager or we provide a default one */
             var trustManager: ApproovTrustManager?
@@ -652,48 +657,6 @@ public class ApproovSession: Session {
                        redirectHandler: redirectHandler,
                        cachedResponseHandler: cachedResponseHandler,
                        eventMonitors: eventMonitors)
-            
-        } catch  {
-                // TODO: should we just log error or throw by changing fucntion signature?
-                os_log("ApproovSession: init error %@", type: .error, error.localizedDescription)
-                return nil
-        }
-    }
-
-    // Bind Header string
-    public static var bindHeader: String {
-        get {
-            ApproovInterceptor.bindHeader
-        }
-        set {
-            ApproovInterceptor.bindHeader = newValue
-        }
-    }
-    
-    // Approov Token Header and Prefix
-    public static var approovTokenHeaderAndPrefix: (approovTokenHeader: String, approovTokenPrefix: String) {
-        get {
-            ApproovInterceptor.approovTokenHeaderAndPrefix
-        }
-        set {
-            ApproovInterceptor.approovTokenHeaderAndPrefix = newValue
-        }
-    }
-    
-    // Precheck function
-    public static func precheck() throws {
-        return try ApproovInterceptor.precheck()
-        
-    }
-    
-    // Fetch secure string function
-    static func fetchSecureString(key: String, newDef: String?) throws -> String? {
-        return try ApproovInterceptor.fetchSecureString(key: key, newDef: newDef)
-    }
-    
-    // Custom JWT function
-    static func fetchCustomJWT(payload: String) throws -> String? {
-        return try ApproovInterceptor.fetchCustomJWT(payload: payload)
     }
 }
 
