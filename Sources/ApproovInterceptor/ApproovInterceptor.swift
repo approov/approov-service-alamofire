@@ -208,13 +208,13 @@ public class ApproovTrustManager: ServerTrustManager {
 /*  See https://alamofire.github.io/Alamofire/Protocols/RequestInterceptor.html
  *
  */
-public class ApproovInterceptor:  RequestInterceptor {
+private class ApproovInterceptor:  RequestInterceptor {
     
     /*  Alamofire interceptor protocol
      *https://github.com/Alamofire/Alamofire/blob/master/Documentation/AdvancedUsage.md#adapting-and-retrying-requests-with-requestinterceptor
      */
     public func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {
-        let approovData = ApproovService.fetchApproovToken(request: urlRequest)
+        let approovData = ApproovService.updateRequestWithApproov(request: urlRequest)
         if approovData.decision == .ShouldProceed {
             completion(.success(approovData.request))
         } else {    // .ShouldRetry or .ShouldFail
@@ -368,10 +368,10 @@ public class ApproovService {
     }
     
     /*
-     *  Convenience function fetching the Approov token
+     *  Convenience function updating a request with the Approov token
      *
      */
-    fileprivate static func fetchApproovToken(request: URLRequest) -> ApproovData {
+    fileprivate static func updateRequestWithApproov(request: URLRequest) -> ApproovData {
         var returnData = ApproovData(request: request, decision: .ShouldFail, statusMessage: "", error: nil)
         // Check if Bind Header is set to a non empty String
         if ApproovService.bindHeader != "" {
