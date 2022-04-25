@@ -4,3 +4,4 @@ A wrapper for the [Approov SDK](https://github.com/approov/approov-ios-sdk) to e
 
 Please see the [Quickstart](https://github.com/approov/quickstart-ios-swift-alamofire) for usage instructions.
 
+Additional optional features regarding `Alamofire` are desribed [here](https://github.com/approov/approov-service-alamofire/ALAMOFIRE-OPTIONS.md)
