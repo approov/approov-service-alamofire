@@ -266,29 +266,23 @@ public class ApproovService {
      * with a different configuration (config) we throw an ApproovException.configurationError
      * If the Approov SDk fails to be initialized for some other reason, an .initializationFailure is raised
      */
-    public static func initialize(config: String? = nil) throws {
+    public static func initialize(config: String) throws {
         do {
             try ApproovService.initializerQueue.sync  {
                 if ApproovService.approovSDKInitialised {
                     // We have initialized already, just check if using different config string
-                    if config != nil {
-                        if config != ApproovService.approovConfigStringUsed {
-                            throw ApproovError.configurationError(message: "ApproovInterceptor already initialized with different config")
-                        }
+                    if config != ApproovService.approovConfigStringUsed {
+                        throw ApproovError.configurationError(message: "ApproovInterceptor already initialized with different config")
                     }
                     // We have already initialized, just ignore
                     return
                 }
                 // We are trying to initialize the Approov SDK
-                if config == nil {
-                    // Is not possible to initialize the Approov SDK with no config string
-                    throw ApproovError.initializationError(message: "ApproovInterceptor requires config string to intitialize SDK")
-                }
                 /* Initialise Approov SDK */
                 do {
-                    if config!.count > 0 {
+                    if config.count > 0 {
                         // Allow empty config string to initialize
-                        try Approov.initialize(config!, updateConfig: "auto", comment: nil)
+                        try Approov.initialize(config, updateConfig: "auto", comment: nil)
                     }
                     Approov.setUserProperty("approov-service-alamofire")
                     ApproovService.approovSDKInitialised = true
