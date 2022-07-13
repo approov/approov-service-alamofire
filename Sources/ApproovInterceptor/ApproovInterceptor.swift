@@ -681,7 +681,7 @@ public class ApproovService {
     public static func fetchSecureString(key: String, newDef: String?) throws -> String? {
         // determine the type of operation as the values themselves cannot be logged
         var type = "lookup"
-        if newDef == nil {
+        if newDef != nil {
             type = "definition"
         }
         // invoke fetch secure string
