@@ -29,6 +29,10 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
             0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05,
             0x00, 0x03, 0x82, 0x01, 0x0f, 0x00
         ]
+        static let rsa3072SPKIHeader:[UInt8] = [
+            0x30, 0x82, 0x01, 0xa2, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05,
+            0x00, 0x03, 0x82, 0x01, 0x8f, 0x00
+        ]
         static let rsa4096SPKIHeader:[UInt8]  = [
             0x30, 0x82, 0x02, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05,
             0x00, 0x03, 0x82, 0x02, 0x0f, 0x00
@@ -52,6 +56,7 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
     private static func initializePKI() {
         var rsaDict = [Int:Data]()
         rsaDict[2048] = Data(Constants.rsa2048SPKIHeader)
+        rsaDict[3072] = Data(Constants.rsa3072SPKIHeader)
         rsaDict[4096] = Data(Constants.rsa4096SPKIHeader)
         var eccDict = [Int:Data]()
         eccDict[256] = Data(Constants.ecdsaSecp256r1SPKIHeader)
@@ -143,7 +148,7 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
         }
         
         // determine if the provided pins match the expected ones
-        let isPinMatch: Bool = try {
+        let isPinMatch: Bool = {
             if let pins = approovPins[host] {
                 // the host pinning is managed by Approov
                 var pinsForHost = pins
@@ -172,8 +177,9 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
                             }
                         }
                     } catch let error {
-                        // throw to indicate we could not get the SPKI
-                        throw error
+                        // if there is an exception (typically because the certificate type isn't supported to get the SPKI header) then
+                        // we simply log this on the basis that it might not being pinned to anyway
+                        os_log("ApproovService: skipping pinning for certificate: %@", error.localizedDescription)
                     }
                 }
                 
