@@ -244,3 +244,4 @@ public class ApproovTrustManager: ServerTrustManager {
         return try super.serverTrustEvaluator(forHost: host)
     }
 }
+
