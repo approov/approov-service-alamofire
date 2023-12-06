@@ -50,6 +50,9 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
     // SPKI headers for both RSA and ECC
     private static var pkiHeaders = [String:[Int:Data]]()
     
+    // Initializer called flag
+    private static var isInitialized = false
+    
     /**
      * Initialize SPKI dictionary
      */
@@ -69,7 +72,10 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
      * Consttruct a new ApproovTrustEvaluator,.
      */
     init() {
-        ApproovTrustEvaluator.initializePKI()
+        if !ApproovTrustEvaluator.isInitialized {
+            ApproovTrustEvaluator.initializePKI()
+            ApproovTrustEvaluator.isInitialized = true
+        }
     }
     
     /**
