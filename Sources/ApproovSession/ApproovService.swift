@@ -162,6 +162,23 @@ public class ApproovService {
     }
     
     /**
+     * Sets a development key indicating that the app is a development version and it should
+     * pass attestation even if the app is not registered or it is running on an emulator. The
+     * development key value can be rotated at any point in the account if a version of the app
+     * containing the development key is accidentally released. This is primarily
+     * used for situations where the app package must be modified or resigned in
+     * some way as part of the testing process.
+     *
+     * @param devKey is the development key to be used
+     */
+    public static func setDevKey(devKey: String) {
+        stateQueue.sync {
+            Approov.setDevKey(devKey)
+            os_log("ApproovService: setDevKey")
+        }
+    }
+    
+    /**
      * Sets a binding header that must be present on all requests using the Approov service. A
      * header should be chosen whose value is unchanging for most requests (such as an
      * Authorization header). A hash of the header value is included in the issued Approov tokens

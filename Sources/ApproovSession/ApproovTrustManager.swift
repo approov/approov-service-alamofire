@@ -47,35 +47,40 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
         ]
     }
     
+    // the PKI queue to manage serial access to the PKI initialization
+    private static let pkiQueue = DispatchQueue(label: "ApproovService.pki", qos: .userInitiated)
+    
     // SPKI headers for both RSA and ECC
     private static var pkiHeaders = [String:[Int:Data]]()
     
-    // Initializer called flag
+    // Indicates if the SPKI headers have been initialized
     private static var isInitialized = false
-    
+
     /**
-     * Initialize SPKI dictionary
+     * Initialize the SPKI dictionary.
      */
-    private static func initializePKI() {
-        var rsaDict = [Int:Data]()
-        rsaDict[2048] = Data(Constants.rsa2048SPKIHeader)
-        rsaDict[3072] = Data(Constants.rsa3072SPKIHeader)
-        rsaDict[4096] = Data(Constants.rsa4096SPKIHeader)
-        var eccDict = [Int:Data]()
-        eccDict[256] = Data(Constants.ecdsaSecp256r1SPKIHeader)
-        eccDict[384] = Data(Constants.ecdsaSecp384r1SPKIHeader)
-        pkiHeaders[kSecAttrKeyTypeRSA as String] = rsaDict
-        pkiHeaders[kSecAttrKeyTypeECSECPrimeRandom as String] = eccDict
+    private static func initializeSPKI() {
+        pkiQueue.sync {
+            if !isInitialized {
+                var rsaDict = [Int:Data]()
+                rsaDict[2048] = Data(Constants.rsa2048SPKIHeader)
+                rsaDict[3072] = Data(Constants.rsa3072SPKIHeader)
+                rsaDict[4096] = Data(Constants.rsa4096SPKIHeader)
+                var eccDict = [Int:Data]()
+                eccDict[256] = Data(Constants.ecdsaSecp256r1SPKIHeader)
+                eccDict[384] = Data(Constants.ecdsaSecp384r1SPKIHeader)
+                pkiHeaders[kSecAttrKeyTypeRSA as String] = rsaDict
+                pkiHeaders[kSecAttrKeyTypeECSECPrimeRandom as String] = eccDict
+                isInitialized = true
+            }
+        }
     }
-    
+
     /**
      * Consttruct a new ApproovTrustEvaluator,.
      */
     init() {
-        if !ApproovTrustEvaluator.isInitialized {
-            ApproovTrustEvaluator.initializePKI()
-            ApproovTrustEvaluator.isInitialized = true
-        }
+        ApproovTrustEvaluator.initializePKI()
     }
     
     /**
