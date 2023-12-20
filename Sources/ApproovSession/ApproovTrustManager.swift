@@ -59,7 +59,7 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
     /**
      * Initialize the SPKI dictionary.
      */
-    private static func initializeSPKI() {
+    private static func initializePKI() {
         pkiQueue.sync {
             if !isInitialized {
                 var rsaDict = [Int:Data]()
