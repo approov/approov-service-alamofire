@@ -77,7 +77,7 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
     }
 
     /**
-     * Consttruct a new ApproovTrustEvaluator,.
+     * Construct a new ApproovTrustEvaluator.
      */
     init() {
         ApproovTrustEvaluator.initializePKI()
