@@ -61,7 +61,7 @@ public class ApproovSession: Session {
                 eventMonitors: [EventMonitor] = []) {
         
         var localInterceptor: RequestInterceptor?
-        // Check if interceptor is of type Interceptor
+        // Create approov interceptor
         let approovInterceptor = ApproovInterceptor()
         if let interceptorWrapper = interceptor {
             // Append the Approov interceptor to the list of adaptors
