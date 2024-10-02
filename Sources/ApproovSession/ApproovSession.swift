@@ -54,12 +54,23 @@ public class ApproovSession: Session {
                 delegate: SessionDelegate? = nil,
                 requestQueue: DispatchQueue? = nil,
                 serializationQueue: DispatchQueue? = nil,
+                interceptor: Interceptor? = nil,
                 serverTrustManager: ApproovTrustManager? = nil,
                 redirectHandler: RedirectHandler? = nil,
                 cachedResponseHandler: CachedResponseHandler? = nil,
                 eventMonitors: [EventMonitor] = []) {
-        // use an interceptor that adds the Approov protection
-        let interceptor = ApproovInterceptor()
+        
+        var localInterceptor: RequestInterceptor?
+        // Check if interceptor is of type Interceptor
+        let approovInterceptor = ApproovInterceptor()
+        if let interceptorWrapper = interceptor {
+            // Append the Approov interceptor to the list of adaptors
+            let interceptors : [RequestInterceptor] = [approovInterceptor]
+            localInterceptor = Interceptor(adapters: interceptorWrapper.adapters, retriers: interceptorWrapper.retriers, interceptors: interceptors)
+        } else {
+            // If no interceptor is provided, create a new one with the Approov interceptor
+            localInterceptor = approovInterceptor
+        }
         
         // use any user supplied trust manager - note that this means that Approov pinning
         // will be disabled if so, unless the ApproovTrustManager is used
@@ -90,7 +101,7 @@ public class ApproovSession: Session {
                    startRequestsImmediately: startRequestsImmediately,
                    requestQueue: requestQueue,
                    serializationQueue: serializationQueue,
-                   interceptor: interceptor,
+                   interceptor: localInterceptor,
                    serverTrustManager: trustManager,
                    redirectHandler: redirectHandler,
                    cachedResponseHandler: cachedResponseHandler,
