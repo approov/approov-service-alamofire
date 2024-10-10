@@ -68,6 +68,16 @@ struct ApproovUpdateResponse {
     var error:Error?
 }
 
+// message signing configuration
+struct ApproovMessageSigningConfig {
+    // the name of the header that will be used to send the message signature
+    var targetHeader: String
+    // the list of headers to include in the message to be signed, in the order they should be added
+    var signedHeaders: [String]
+    // true if the message body should also be signed
+    var signBody: Bool
+}
+
 // ApproovService provides a mediation layer to the Approov SDK itself
 public class ApproovService {
     // private initializer
@@ -106,6 +116,9 @@ public class ApproovService {
     
     // map of URL regexs that should be excluded from any Approov protection, mapped to the compiled Pattern
     private static var exclusionURLRegexs: Dictionary<String, NSRegularExpression> = Dictionary()
+
+    // message signing configuration, if any
+    private static var messageSigningConfig: ApproovMessageSigningConfig?
     
     /**
      * Initializes the ApproovService using a config string. The onfig is obtained using `approov sdk -getConfigString`
@@ -143,6 +156,25 @@ public class ApproovService {
             }
         }
     }
+
+    /**
+     * Sets the message signing configuration. If this is set, then a message signature will be computed based on the
+     * request URL, the headers specified in signedHeaders in the order in which they are listed and, optionally, the
+     * body of the message. The signature will be added to the request headers using the header name specified in header.
+     *
+     * @param header is the name of the header to use for the message signature
+     * @param signedHeaders is the list of headers in the order in which to include them in the message signature.
+     * @param signBody is true if the message body should also be included in the message signature
+     */
+    public static func setMessageSigning(header: String, signedHeaders: [String], signBody: Bool) {
+        stateQueue.sync {
+            messageSigningConfig = ApproovMessageSigningConfig(targetHeader: header, signedHeaders: signedHeaders,
+                signBody: signBody)
+            os_log("ApproovService: setMessageSigning: %@", type: .debug, header, signedHeaders, signBody)
+        }
+    }
+
+    // TODO how to unset message signing?
     
     /**
      * Sets a flag indicating if the network interceptor should proceed anyway if it is
@@ -404,7 +436,7 @@ public class ApproovService {
      * is not possible to use the networking interception to add the token. This will
      * likely require network access so may take some time to complete. If the attestation fails
      * for any reason then an ApproovError is thrown. This will be ApproovNetworkException for
-     * networking issues wher a user initiated retry of the operation should be allowed. Note that
+     * networking issues where a user initiated retry of the operation should be allowed. Note that
      * the returned token should NEVER be cached by your app, you should call this function when
      * it is needed.
      *
@@ -433,6 +465,7 @@ public class ApproovService {
         }
     }
     
+    // TODO remove this function from the public interface?
     /**
      * Gets the signature for the given message. This uses an account specific message signing key that is
      * transmitted to the SDK after a successful fetch if the facility is enabled for the account. Note
@@ -792,6 +825,35 @@ public class ApproovService {
                             }
                     }
                 }
+            }
+        }
+
+        // if message signing is enabled we, add the signature header to the request
+        let messageSigningConf = stateQueue.sync {
+            return messageSigningConfig
+        }
+        if messageSigningConf != nil {
+            // Build the message to sign, consisting of the URL, the values of the included headers, and the body, if enabled
+            var message: String = ""
+            // Add the URL to the message
+            message.append(response.request.url!.absoluteString)
+            // Add the included headers to the message
+            for header in messageSigningConf!.signedHeaders {
+                if let value = response.request.value(forHTTPHeaderField: header) {
+                    message.append(value)
+                }
+            }
+            // Add the body to the message
+            if messageSigningConf!.signBody {
+                if let body = response.request.httpBody {
+                    // TODO: Is this the correct encoding?
+                    message.append(String(data: body, encoding: .utf8)!)
+                }
+            }
+            // Compute the signature and add it to the request
+            let signature = Approov.getMessageSignature(message)
+            if signature != nil && messageSigningConf!.targetHeader != "" {
+                response.request.setValue(signature, forHTTPHeaderField: messageSigningConf!.targetHeader)
             }
         }
         
