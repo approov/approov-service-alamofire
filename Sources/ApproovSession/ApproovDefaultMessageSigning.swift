@@ -292,7 +292,7 @@ public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
 
         let defaultSignatureParametersFactory = SignatureParametersFactory()
             .setBaseParameters(baseParameters)
-            .setUseDeviceMessageSigning()
+            .setUseInstallMessageSigning()
             .setAddCreated(true)
             .setExpiresLifetime(defaultExpiresLifetime)
             .setAddApproovTokenHeader(true)
@@ -361,7 +361,7 @@ public class SignatureParametersFactory {
      *
      * - Returns: The current instance for method chaining.
      */
-    func setUseDeviceMessageSigning() -> SignatureParametersFactory {
+    func setUseInstallMessageSigning() -> SignatureParametersFactory {
         self.useAccountMessageSigning = false
         return self
     }
