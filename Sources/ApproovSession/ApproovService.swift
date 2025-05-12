@@ -27,25 +27,25 @@ public enum ApproovError: Error, LocalizedError {
     case permanentError(message: String)
     case rejectionError(message: String, ARC: String, rejectionReasons: String)
     public var localizedDescription: String {
-      get {
-          switch self {
-          case let .initializationError(message),
-               let .configurationError(message),
-               let .pinningError(message),
-               let .networkingError(message),
-               let .permanentError(message):
-               return message
-          case let .rejectionError(message, ARC, rejectionReasons):
-              var info: String = ""
-              if ARC != "" {
-                  info += ", ARC: " + ARC
-              }
-              if rejectionReasons != "" {
-                  info += ", reasons: " + rejectionReasons
-              }
-              return message + info
-          }
-      }
+        get {
+            switch self {
+            case let .initializationError(message),
+                 let .configurationError(message),
+                 let .pinningError(message),
+                 let .networkingError(message),
+                 let .permanentError(message):
+                return message
+            case let .rejectionError(message, ARC, rejectionReasons):
+                var info: String = ""
+                if ARC != "" {
+                    info += ", ARC: " + ARC
+                }
+                if rejectionReasons != "" {
+                    info += ", reasons: " + rejectionReasons
+                }
+                return message + info
+            }
+        }
     }
     public var errorDescription: String? {
         return localizedDescription
@@ -72,44 +72,44 @@ struct ApproovUpdateResponse {
 public class ApproovService {
     // private initializer
     private init() {}
-    
+
     // the dispatch queue to manage serial access to intialization modified variables
     private static let initializerQueue = DispatchQueue(label: "ApproovService.initializer", qos: .userInitiated)
-    
+
     // configuration string used for initialization
     private static var configString: String?
 
     // status of Approov SDK initialization
     private static var isInitialized = false
-    
+
     // the dispatch queue to manage serial access to other ApproovService state
     private static let stateQueue = DispatchQueue(label: "ApproovService.state", qos: .userInitiated)
-    
+
     // if we should proceed on network fail
     private static var proceedOnNetworkFail = false
-    
+
     // binding header name
     private static var bindingHeader = ""
-    
+
     // Approov token default header
     private static var approovTokenHeader = "Approov-Token"
-    
+
     // Approov token custom prefix: any prefix to be added such as "Bearer "
     private static var approovTokenPrefix = ""
 
     // the target for request processing interceptorExtensions
     private static var interceptorExtensions: ApproovInterceptorExtensions? = nil
-    
+
     // map of headers that should have their values substituted for secure strings, mapped to their
     // required prefixes
     private static var substitutionHeaders: Dictionary<String, String> = Dictionary()
 
     // set of query parameters that may be substituted, specified by the key name
     private static var substitutionQueryParams: Set<String> = Set()
-    
+
     // map of URL regexs that should be excluded from any Approov protection, mapped to the compiled Pattern
     private static var exclusionURLRegexs: Dictionary<String, NSRegularExpression> = Dictionary()
-    
+
     /**
      * Initializes the SDK with the config obtained using `approov sdk -getConfigString` or
      * in the original onboarding email. Note the initializer function should only ever be called once.
@@ -145,8 +145,8 @@ public class ApproovService {
                         os_log("ApproovService: Ignoring initialization error in Approov SDK: %@", type: .error, error.localizedDescription)
                         isInitialized = true
                     } else {
-                        throw ApproovError.initializationFailure(message: "Error initializing Approov SDK: \(error.localizedDescription)")
-                    }                        
+                        throw ApproovError.initializationError(message: "Error initializing Approov SDK: \(error.localizedDescription)")
+                    }
                 }
                 isInitialized = true
                 configString = config
@@ -154,7 +154,7 @@ public class ApproovService {
             }
         }
     }
-    
+
     /**
      * Sets a flag indicating if the network interceptor should proceed anyway if it is
      * not possible to obtain an Approov token due to a networking failure. If this is set
@@ -172,7 +172,7 @@ public class ApproovService {
             os_log("ApproovService: setProceedOnNetworkFailure ", type: .info, proceed)
         }
     }
-    
+
     /**
      * Sets a development key indicating that the app is a development version and it should
      * pass attestation even if the app is not registered or it is running on an emulator. The
@@ -205,7 +205,7 @@ public class ApproovService {
             os_log("ApproovService: setApproovHeader: %@", type: .debug, header, prefix)
         }
     }
-    
+
     /**
      * Sets a binding header that must be present on all requests using the Approov service. A
      * header should be chosen whose value is unchanging for most requests (such as an
@@ -222,7 +222,7 @@ public class ApproovService {
         }
     }
 
-        /**
+    /**
      * Sets the interceptor extensions callback handler. This facility was introduced to support
      * message signing that is independent from the rest of the attestation flow. The default
      * ApproovService layer issues no callbacks, provide a non-null ApproovInterceptorExtensions
@@ -253,32 +253,32 @@ public class ApproovService {
      * @param header is the header to be marked for substitution
      * @param prefix is any required prefix to the value being substituted or nil if not required
      */
-     public static func addSubstitutionHeader(header: String, prefix: String?) {
-         stateQueue.sync {
-             if prefix == nil {
-                 substitutionHeaders[header] = ""
-                 os_log("ApproovService: addSubstitutionHeader: %@", type: .debug, header)
-             } else {
-                 substitutionHeaders[header] = prefix
-                 os_log("ApproovService: addSubstitutionHeader: %@ %@", type: .debug, header, prefix!)
-             }
-         }
+    public static func addSubstitutionHeader(header: String, prefix: String?) {
+        stateQueue.sync {
+            if prefix == nil {
+                substitutionHeaders[header] = ""
+                os_log("ApproovService: addSubstitutionHeader: %@", type: .debug, header)
+            } else {
+                substitutionHeaders[header] = prefix
+                os_log("ApproovService: addSubstitutionHeader: %@ %@", type: .debug, header, prefix!)
+            }
+        }
     }
-    
+
     /**
      * Removes the name of a header if it exists from the secure strings substitution dictionary.
      *
      * @param header is the name of header to be removed from substitution
      */
-     public static func removeSubstitutionHeader(header: String) {
-         stateQueue.sync {
-             if substitutionHeaders[header] != nil {
-                 substitutionHeaders.removeValue(forKey: header)
-             }
-             os_log("ApproovService: removeSubstitutionHeader: %@", type: .debug, header)
-         }
+    public static func removeSubstitutionHeader(header: String) {
+        stateQueue.sync {
+            if substitutionHeaders[header] != nil {
+                substitutionHeaders.removeValue(forKey: header)
+            }
+            os_log("ApproovService: removeSubstitutionHeader: %@", type: .debug, header)
+        }
     }
-    
+
     /**
      * Adds a key name for a query parameter that should be subject to secure strings substitution.
      * This means that if the query parameter is present in a URL then the value will be used as a
@@ -295,7 +295,7 @@ public class ApproovService {
             os_log("ApproovService: addSubstitutionQueryParam: %@", type: .debug, key)
         }
     }
-    
+
     /**
      * Removes a query parameter key name previously added using addSubstitutionQueryParam.
      *
@@ -307,7 +307,7 @@ public class ApproovService {
             os_log("ApproovService: removeSubstitutionQueryParam: %@", type: .debug, key)
         }
     }
-    
+
     /**
      * Adds an exclusion URL regular expression. If a URL for a request matches this regular expression
      * then it will not be subject to any Approov protection. Note that this facility must be used with
@@ -347,7 +347,7 @@ public class ApproovService {
             }
         }
     }
-    
+
     /**
      * Allows an Approov fetch operation to be performed as early as possible. This
      * permits a token or secure strings to be available while an application might
@@ -359,15 +359,15 @@ public class ApproovService {
             if isInitialized {
                 Approov.fetchToken({(approovResult: ApproovTokenFetchResult) in
                     if approovResult.status == ApproovTokenFetchStatus.unknownURL {
-                    os_log("ApproovService: prefetch: success", type: .debug)
+                        os_log("ApproovService: prefetch: success", type: .debug)
                     } else {
-                    os_log("ApproovService: prefetch: %@", type: .debug, Approov.string(from: approovResult.status))
+                        os_log("ApproovService: prefetch: %@", type: .debug, Approov.string(from: approovResult.status))
                     }
                 }, "approov.io")
             }
         }
     }
-    
+
     /**
      * Performs a precheck to determine if the app will pass attestation. This requires secure
      * strings to be enabled for the account, although no strings need to be set up. This will
@@ -388,7 +388,7 @@ public class ApproovService {
         } else {
             os_log("ApproovService: precheck: %@", type: .debug, Approov.string(from: approovResults.status))
         }
-        
+
         // process the returned Approov status
         if approovResults.status == ApproovTokenFetchStatus.rejected {
             // if the request is rejected then we provide a special exception with additional information
@@ -405,7 +405,7 @@ public class ApproovService {
             throw ApproovError.permanentError(message: "precheck: " + Approov.string(from: approovResults.status))
         }
     }
-    
+
     /**
      * Gets the device ID used by Approov to identify the particular device that the SDK is running on. Note
      * that different Approov apps on the same device will return a different ID. Moreover, the ID may be
@@ -420,7 +420,7 @@ public class ApproovService {
         }
         return deviceID
     }
-    
+
     /**
      * Directly sets the data hash to be included in subsequently fetched Approov tokens. If the hash is
      * different from any previously set value then this will cause the next token fetch operation to
@@ -468,7 +468,7 @@ public class ApproovService {
             throw ApproovError.permanentError(message: "fetchToken: " + Approov.string(from: result.status))
         }
     }
-    
+
     /**
      * Gets the signature for the given message. This method is obsolete and will return
      * the account-specific message signature.
@@ -504,7 +504,7 @@ public class ApproovService {
         os_log("ApproovService: getInstallMessageSignature", type: .debug)
         return Approov.getInstallMessageSignature(message)
     }
-    
+
     /**
      * Fetches a secure string with the given key. If newDef is not nil then a secure string for
      * the particular app instance may be defined. In this case the new value is returned as the
@@ -529,11 +529,11 @@ public class ApproovService {
         if newDef != nil {
             type = "definition"
         }
-        
+
         // try and fetch the secure string
         let approovResult = Approov.fetchSecureStringAndWait(key, newDef)
         os_log("ApproovService: fetchSecureString: %@: %@", type: .info, type, Approov.string(from: approovResult.status))
-        
+
         // process the returned Approov status
         if approovResult.status == ApproovTokenFetchStatus.rejected {
             // if the request is rejected then we provide a special exception with additional information
@@ -551,7 +551,7 @@ public class ApproovService {
         }
         return approovResult.secureString
     }
-        
+
     /**
      * Fetches a custom JWT with the given payload. Note that this call will require network
      * transaction and thus will block for some time, so should not be called from the UI thread.
@@ -569,12 +569,12 @@ public class ApproovService {
         // fetch the custom JWT
         let approovResult = Approov.fetchCustomJWTAndWait(payload)
         os_log("ApproovService: fetchCustomJWT: %@", type: .info, Approov.string(from: approovResult.status))
-        
+
         // process the returned Approov status
         if approovResult.status == ApproovTokenFetchStatus.rejected {
             // if the request is rejected then we provide a special exception with additional information
             throw ApproovError.rejectionError(message: "fetchCustomJWT: rejected", ARC: approovResult.arc,
-                                             rejectionReasons: approovResult.rejectionReasons)
+                                              rejectionReasons: approovResult.rejectionReasons)
         } else if approovResult.status == ApproovTokenFetchStatus.noNetwork ||
                   approovResult.status == ApproovTokenFetchStatus.poorNetwork ||
                   approovResult.status == ApproovTokenFetchStatus.mitmDetected {
@@ -608,7 +608,7 @@ public class ApproovService {
             }
         }
     }
-    
+
     /**
      * Checks if the url matches one of the exclusion regexs.
      *
@@ -628,7 +628,7 @@ public class ApproovService {
             return false
         }
     }
-    
+
     /**
      * Convenience function fetching the Approov token and updating the request with it. This will also
      * perform header or query parameter substitutions to include protected secrets.
@@ -641,8 +641,8 @@ public class ApproovService {
         var changes = ApproovRequestMutations()
         if let url = request.url {
             if !isInitialized {
-                 os_log("ApproovService: not initialized, forwarding: %@", type: .info, url.absoluteString)
-                 return ApproovUpdateResponse(request: request, decision: .ShouldIgnore, sdkMessage: "", error: nil)
+                os_log("ApproovService: not initialized, forwarding: %@", type: .info, url.absoluteString)
+                return ApproovUpdateResponse(request: request, decision: .ShouldIgnore, sdkMessage: "", error: nil)
             }
             if isURLExcluded(url: url) {
                 os_log("ApproovService: excluded, forwarding: %@", type: .info, url.absoluteString)
@@ -652,10 +652,10 @@ public class ApproovService {
             os_log("ApproovService: no url provided", type: .info)
             return ApproovUpdateResponse(request: request, decision: .ShouldIgnore, sdkMessage: "", error: nil)
         }
-        
+
         // we construct a response to return
         var response = ApproovUpdateResponse(request: request, decision: .ShouldFail, sdkMessage: "", error: nil)
-        
+
         // check if we need to apply a binding header
         let bindHeader = stateQueue.sync {
             return bindingHeader
@@ -667,66 +667,68 @@ public class ApproovService {
                 Approov.setDataHashInToken(value)
             }
         }
-        
+
         // fetch an Approov token: request.url can not be nil here
         let approovResult = Approov.fetchTokenAndWait(request.url!.absoluteString)
         let hostname = hostnameFromURL(url: request.url!)
         os_log("ApproovService: updateRequest %@: %@", type: .info, hostname, approovResult.loggableToken())
-        
+
         // log if a configuration update is received and call fetchConfig to clear the update state
         if approovResult.isConfigChanged {
             Approov.fetchConfig()
             os_log("ApproovService: dynamic configuration update received")
         }
-        
+
         // handle the Approov token fetch response
         response.sdkMessage = Approov.string(from: approovResult.status)
-        var aChange = false
+        var hasChanges = false
         var setTokenHeaderKey: String?
+        var setTokenHeaderValue: String?
         switch approovResult.status {
-            case ApproovTokenFetchStatus.success:
-                // go ahead and make the API call and add the Approov token header
-                response.decision = .ShouldProceed
-                let tokenHeader = stateQueue.sync {
-                    return approovTokenHeader
-                }
-                let tokenPrefix = stateQueue.sync {
-                    return approovTokenPrefix
-                }
-                aChange = true
-                setTokenHeaderKey = tokenHeader
-                response.request.setValue(tokenPrefix + approovResult.token, forHTTPHeaderField: tokenHeader)
-            case ApproovTokenFetchStatus.noNetwork,
-                 ApproovTokenFetchStatus.poorNetwork,
-                 ApproovTokenFetchStatus.mitmDetected:
-                // we are unable to get the Approov token due to network conditions so the request can
-                // be retried by the user later
-                if !proceedOnNetworkFail {
-                    response.decision = .ShouldRetry
-                    response.error = ApproovError.networkingError(message: response.sdkMessage)
-                    return response
-                }
-            case ApproovTokenFetchStatus.unprotectedURL,
-                 ApproovTokenFetchStatus.unknownURL,
-                 ApproovTokenFetchStatus.noApproovService:
-                // we proceed but do NOT add the Approov token header to the request headers
-                response.decision = .ShouldProceed
-            default:
-                // we have a more permanent error condition
-                response.decision = .ShouldFail
-                response.error = ApproovError.permanentError(message: response.sdkMessage)
+        case ApproovTokenFetchStatus.success:
+            // go ahead and make the API call and add the Approov token header
+            response.decision = .ShouldProceed
+            let tokenHeader = stateQueue.sync {
+                return approovTokenHeader
+            }
+            let tokenPrefix = stateQueue.sync {
+                return approovTokenPrefix
+            }
+            hasChanges = true
+            setTokenHeaderKey = tokenHeader
+            setTokenHeaderValue = tokenPrefix + approovResult.token
+        case ApproovTokenFetchStatus.noNetwork,
+            ApproovTokenFetchStatus.poorNetwork,
+            ApproovTokenFetchStatus.mitmDetected:
+            // we are unable to get the Approov token due to network conditions so the request can
+            // be retried by the user later
+            if !proceedOnNetworkFail {
+                response.decision = .ShouldRetry
+                response.error = ApproovError.networkingError(message: response.sdkMessage)
                 return response
+            }
+        case ApproovTokenFetchStatus.unprotectedURL,
+            ApproovTokenFetchStatus.unknownURL,
+            ApproovTokenFetchStatus.noApproovService:
+            // we proceed but do NOT add the Approov token header to the request headers
+            response.decision = .ShouldProceed
+        default:
+            // we have a more permanent error condition
+            response.decision = .ShouldFail
+            response.error = ApproovError.permanentError(message: response.sdkMessage)
+            return response
         }
-        
+
         // we only continue additional processing if we had a valid status from Approov, to prevent additional delays
         // by trying to fetch from Approov again and this also protects against header substitutions in domains not
         // protected by Approov and therefore are potentially subject to a MitM.
         if (approovResult.status != .success) && (approovResult.status != .unprotectedURL) {
             return response
         }
-        
+
         // we now deal with any headers substitutions, which may require further fetches but these
         // should be using cached results
+        var setSubstitutionHeaders: [String: String] = [:]
         if let requestHeaders = response.request.allHTTPHeaderFields {
             let subsHeadersCopy = stateQueue.sync {
                 return substitutionHeaders
@@ -739,12 +741,13 @@ public class ApproovService {
                         let index = prefix.index(prefix.startIndex, offsetBy: prefix.count)
                         let approovResults = Approov.fetchSecureStringAndWait(String(value.suffix(from:index)), nil)
                         os_log("ApproovService: Substituting header: %@, %@", type: .info, header, Approov.string(from: approovResults.status))
-                        
+
                         // process the result of the token fetch operation
                         if approovResults.status == ApproovTokenFetchStatus.success {
                             // we add the modified header to the new copy of request
                             if let secureStringResult = approovResults.secureString {
-                                response.request.setValue(prefix + secureStringResult, forHTTPHeaderField: header)
+                                hasChanges = true;
+                                setSubstitutionHeaders[header] = prefix + secureStringResult
                             } else {
                                 // secure string is nil
                                 response.decision = .ShouldFail
@@ -778,18 +781,20 @@ public class ApproovService {
                 }
             }
         }
-        
+
         // we now deal with any query parameter substitutions, which may require further fetches but these
         // should be using cached results
-        if let currentURL = request.url {
+        var updateURL: URL?
+        var queryKeys: [String] = []
+        if let originalURL = request.url {
             let subsQueryParamsCopy = stateQueue.sync {
                 return substitutionQueryParams
             }
+            var updateURLString = originalURL.absoluteString
             for entry in subsQueryParamsCopy {
-                var urlString = currentURL.absoluteString
-                let urlStringRange = NSRange(urlString.startIndex..<urlString.endIndex, in: urlString)
+                let urlStringRange = NSRange(updateURLString.startIndex..<updateURLString.endIndex, in: updateURLString)
                 let regex = try! NSRegularExpression(pattern: #"[\\?&]"# + entry + #"=([^&;]+)"#, options: [])
-                let matches: [NSTextCheckingResult] = regex.matches(in: urlString, options: [], range: urlStringRange)
+                let matches: [NSTextCheckingResult] = regex.matches(in: updateURLString, options: [], range: urlStringRange)
                 for match: NSTextCheckingResult in matches {
                     // we skip the range at index 0 as this is the match (e.g. ?Api-Key=api_key_placeholder) for the whole
                     // regex, but we only want to replace the query parameter value part (e.g. api_key_placeholder)
@@ -797,88 +802,88 @@ public class ApproovService {
                         // we have found an occurrence of the query parameter to be replaced so we look up the existing
                         // value as a key for a secure string
                         let matchRange = match.range(at: rangeIndex)
-                        if let substringRange = Range(matchRange, in: urlString) {
-                                let queryValue = String(urlString[substringRange])
-                                let approovResults = Approov.fetchSecureStringAndWait(String(queryValue), nil)
-                                os_log("ApproovService: Substituting query parameter: %@, %@", entry,
-                                    Approov.string(from: approovResults.status));
-                            
-                                // process the result of the secure string fetch operation
-                                switch approovResults.status {
-                                case .success:
-                                    // perform a query substitution
-                                    if let secureStringResult = approovResults.secureString {
-                                        urlString.replaceSubrange(Range(matchRange, in: urlString)!, with: secureStringResult)
-                                        if let newURL = URL(string: urlString) {
-                                            response.request.url = newURL
-                                        } else {
-                                            response.decision = .ShouldFail
-                                            response.error = ApproovError.permanentError(
-                                                message: "Query parameter substitution for \(entry): malformed URL \(urlString)")
-                                            return response
-                                        }
-                                    }
-                                case .rejected:
-                                    // if the request is rejected then we provide a special exception with additional information
-                                    response.decision = .ShouldFail
-                                    response.error = ApproovError.rejectionError(
-                                        message: "Query parameter substitution for \(entry): rejected",
-                                        ARC: approovResults.arc,
-                                        rejectionReasons: approovResults.rejectionReasons
-                                    )
-                                    return response
-                                case .noNetwork,
-                                     .poorNetwork,
-                                     .mitmDetected:
-                                    // we are unable to get the secure string due to network conditions so the request can
-                                    // be retried by the user later
-                                    if !proceedOnNetworkFail {
-                                        response.decision = .ShouldRetry
-                                        response.error = ApproovError.networkingError(message: "Query parameter substitution for " +
-                                            "\(entry): network issue, retry needed")
+                        if let substringRange = Range(matchRange, in: updateURLString) {
+                            let queryValue = String(updateURLString[substringRange])
+                            let approovResults = Approov.fetchSecureStringAndWait(String(queryValue), nil)
+                            os_log("ApproovService: Substituting query parameter: %@, %@", entry,
+                                   Approov.string(from: approovResults.status))
+
+                            // process the result of the secure string fetch operation
+                            switch approovResults.status {
+                            case .success:
+                                // perform a query substitution
+                                if let secureStringResult = approovResults.secureString {
+                                    hasChanges = true
+                                    queryKeys.append(entry)
+                                    updateURLString.replaceSubrange(Range(matchRange, in: updateURLString)!, with: secureStringResult)
+                                    updateURL = URL(string: updateURLString)
+                                    if updateURL == nil {
+                                        response.decision = .ShouldFail
+                                        response.error = ApproovError.permanentError(
+                                            message: "Query parameter substitution for \(entry): malformed URL \(updateURLString)")
                                         return response
                                     }
-                                case .unknownKey:
-                                    // do not modify the URL
-                                    break
-                                default:
-                                    // we have failed to get a secure string with a more permanent error
-                                    response.decision = .ShouldFail
-                                    response.error = ApproovError.permanentError(
-                                        message: "Query parameter substitution for \(entry): " +
-                                        Approov.string(from: approovResults.status)
-                                    )
+                                }
+                            case .rejected:
+                                // if the request is rejected then we provide a special exception with additional information
+                                response.decision = .ShouldFail
+                                response.error = ApproovError.rejectionError(
+                                    message: "Query parameter substitution for \(entry): rejected",
+                                    ARC: approovResults.arc,
+                                    rejectionReasons: approovResults.rejectionReasons
+                                )
+                                return response
+                            case .noNetwork,
+                                    .poorNetwork,
+                                    .mitmDetected:
+                                // we are unable to get the secure string due to network conditions so the request can
+                                // be retried by the user later
+                                if !proceedOnNetworkFail {
+                                    response.decision = .ShouldRetry
+                                    response.error = ApproovError.networkingError(message: "Query parameter substitution for " +
+                                        "\(entry): network issue, retry needed")
                                     return response
                                 }
+                            case .unknownKey:
+                                // do not modify the URL
+                                break
+                            default:
+                                // we have failed to get a secure string with a more permanent error
+                                response.decision = .ShouldFail
+                                response.error = ApproovError.permanentError(
+                                    message: "Query parameter substitution for \(entry): " +
+                                    Approov.string(from: approovResults.status)
+                                )
+                                return response
                             }
+                        }
                     }
                 }
             }
         }
-        
-        // TODO Apply all the changes to the request
-        if (aChange) {
-            // TODO Actually provide the ApproovRequestMutations
-            // Request.Builder builder = request.newBuilder();
-            if (setTokenHeaderKey != nil) {
-                // builder.header(setTokenHeaderKey, setTokenHeaderValue);
-                changes.setTokenHeaderKey(setTokenHeaderKey!);
+        // apply all the changes to the request
+        if (hasChanges) {
+            if let tokenHeaderKey = setTokenHeaderKey,
+               let tokenHeaderValue = setTokenHeaderValue {
+                response.request.setValue(tokenHeaderValue, forHTTPHeaderField: tokenHeaderKey)
+                changes.setTokenHeaderKey(tokenHeaderKey);
             }
-            // if (!setSubstitutionHeaders.isEmpty()) {
-            //     for (Map.Entry<String, String> entry : setSubstitutionHeaders.entrySet()) {
-            //         // substitute the header
-            //         builder.header(entry.getKey(), entry.getValue());
-            //     }
-            //     changes.setSubstitutionHeaderKeys(new ArrayList<>(setSubstitutionHeaders.keySet()));
-            // }
-            // if (!originalURL.equals(replacementURL)) {
-            //     builder.url(replacementURL);
-            //     changes.setSubstitutionQueryParamResults(originalURL, queryKeys);
-            // }
-            // request = builder.build();
+            if (!setSubstitutionHeaders.isEmpty) {
+                for (header, value) in setSubstitutionHeaders {
+                    response.request.setValue(value, forHTTPHeaderField: header)
+                }
+                changes.setSubstitutionHeaderKeys(Array(setSubstitutionHeaders.keys))
+            }
+            if let updateURLString = updateURL?.absoluteString,
+               let originalURLString = request.url?.absoluteString {
+                if (originalURLString != updateURLString) {
+                    response.request.url = updateURL
+                    changes.setSubstitutionQueryParamResults(originalURL: originalURLString, substitutionQueryParamKeys: queryKeys);
+                }
+            }
         }
 
-        // Call the processed request callback
+        // call the processed request callback
         if let interceptorExtensions = ApproovService.interceptorExtensions {
             do {
                 response.request = try interceptorExtensions.processedRequest(response.request, changes: changes)
