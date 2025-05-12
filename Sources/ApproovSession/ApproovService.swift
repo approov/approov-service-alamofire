@@ -79,9 +79,6 @@ public class ApproovService {
     // configuration string used for initialization
     private static var configString: String?
 
-    // the initial comment string provided to the initializer
-    private static var initialComment: String?
-
     // status of Approov SDK initialization
     private static var isInitialized = false
     
@@ -126,32 +123,34 @@ public class ApproovService {
      * @throws ApproovError if there was a problem
      */
     public static func initialize(config: String, comment: String? = nil) throws {
-        try initializerQueue.sync {
+        try initializerQueue.sync  {
             // check if we attempt to use a different configString
-            if isInitialized {
-                if config != configString {
+            if isInitialized && ((comment?.hasPrefix("reinit")) == nil) {
+                // ignore multiple initialization calls that use the same configuration
+                if (config != configString) {
                     // throw exception indicating we are attempting to use different config
                     os_log("ApproovService: Attempting to initialize with different configuration", type: .error)
                     throw ApproovError.configurationError(message: "Attempting to initialize with a different configuration")
                 }
+                os_log("ApproovService: Ignoring multiple ApproovService layer initializations with the same config");
             } else {
                 do {
-                    if config.count > 0 {
+                    if !config.isEmpty {
                         // only initialize with a non-empty string as empty string used to bypass this
-                        try Approov.initialize(config, updateConfig: "auto", comment: nil)
-                    }
-                    configString = config
-                    initialComment = comment
-                    // use the comment if not null to immediately initialize with comment as argument
-                    if (initialComment != nil) {
                         try Approov.initialize(config, updateConfig: "auto", comment: comment)
                     }
-                    Approov.setUserProperty("approov-service-urlsession")
-                    isInitialized = true
                 } catch let error {
-                    os_log("ApproovService: Error initializing Approov SDK: %@", type: .error, error.localizedDescription)
-                    throw ApproovError.initializationError(message: "Error initializing Approov SDK: \(error.localizedDescription)")
+                    // If the error is due to the SDK being initilized already, we ignore it otherwise we throw
+                    if error.localizedDescription.localizedCaseInsensitiveContains("Approov SDK already initialized") {
+                        os_log("ApproovService: Ignoring initialization error in Approov SDK: %@", type: .error, error.localizedDescription)
+                        isInitialized = true
+                    } else {
+                        throw ApproovError.initializationFailure(message: "Error initializing Approov SDK: \(error.localizedDescription)")
+                    }                        
                 }
+                isInitialized = true
+                configString = config
+                Approov.setUserProperty("approov-service-urlsession")
             }
         }
     }
