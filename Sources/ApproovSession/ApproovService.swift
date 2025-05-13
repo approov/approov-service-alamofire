@@ -53,7 +53,7 @@ public enum ApproovError: Error, LocalizedError {
 }
 
 // possible results from an Approov request update
-enum ApproovFetchDecision {
+public enum ApproovFetchDecision {
     case ShouldProceed      // Proceed with request
     case ShouldRetry        // User can retry request
     case ShouldFail         // Request should not be made
@@ -61,7 +61,7 @@ enum ApproovFetchDecision {
 }
 
 // result from adding Approov protection to a request
-struct ApproovUpdateResponse {
+public struct ApproovUpdateResponse {
     var request: URLRequest
     var decision: ApproovFetchDecision
     var sdkMessage: String
@@ -73,7 +73,7 @@ public class ApproovService {
     // private initializer
     private init() {}
 
-    // the dispatch queue to manage serial access to intialization modified variables
+    // the dispatch queue to manage serial access to intializer-modified variables
     private static let initializerQueue = DispatchQueue(label: "ApproovService.initializer", qos: .userInitiated)
 
     // configuration string used for initialization
@@ -268,7 +268,7 @@ public class ApproovService {
     /**
      * Removes the name of a header if it exists from the secure strings substitution dictionary.
      *
-     * @param header is the name of header to be removed from substitution
+     * @param header is the name of the header to be removed from substitution
      */
     public static func removeSubstitutionHeader(header: String) {
         stateQueue.sync {
@@ -806,7 +806,7 @@ public class ApproovService {
                             let queryValue = String(updateURLString[substringRange])
                             let approovResults = Approov.fetchSecureStringAndWait(String(queryValue), nil)
                             os_log("ApproovService: Substituting query parameter: %@, %@", entry,
-                                   Approov.string(from: approovResults.status))
+                                Approov.string(from: approovResults.status))
 
                             // process the result of the secure string fetch operation
                             switch approovResults.status {
@@ -828,7 +828,7 @@ public class ApproovService {
                                 // if the request is rejected then we provide a special exception with additional information
                                 response.decision = .ShouldFail
                                 response.error = ApproovError.rejectionError(
-                                    message: "Query parameter substitution for \(entry): rejected",
+                                    message: "Query parameter substitution for \(entry) rejected",
                                     ARC: approovResults.arc,
                                     rejectionReasons: approovResults.rejectionReasons
                                 )

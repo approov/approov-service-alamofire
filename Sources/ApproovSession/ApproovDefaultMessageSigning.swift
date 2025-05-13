@@ -29,22 +29,22 @@ public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
     /**
      * Constant for the SHA-256 digest algorithm (used for body digests).
      */
-    static let DIGEST_SHA256 = "sha-256"
+    public static let DIGEST_SHA256 = "sha-256"
 
     /**
      * Constant for the SHA-512 digest algorithm (used for body digests).
      */
-    static let DIGEST_SHA512 = "sha-512"
+    public static let DIGEST_SHA512 = "sha-512"
 
     /**
      * Constant for the ECDSA P-256 with SHA-256 algorithm (used when signing with install private key).
      */
-    static let ALG_ES256 = "ecdsa-p256-sha256"
+    public static let ALG_ES256 = "ecdsa-p256-sha256"
 
     /**
      * Constant for the HMAC with SHA-256 algorithm (used when signing with the account signing key).
      */
-    static let ALG_HS256 = "hmac-sha256"
+    public static let ALG_HS256 = "hmac-sha256"
 
     /**
      * Default factory for generating signature parameters.
@@ -162,7 +162,7 @@ public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
             // os_log("Message Header Signature-Input: %@", type: .debug, sigInputHeader)
 
             // Add headers to the request
-            var signedRequest = request
+            var signedRequest = provider.getRequest()
             signedRequest.addValue(sigHeader, forHTTPHeaderField: "Signature")
             signedRequest.addValue(sigInputHeader, forHTTPHeaderField: "Signature-Input")
 
@@ -328,7 +328,7 @@ public class SignatureParametersFactory {
      * - Parameter baseParameters: The base parameters to set.
      * - Returns: The current instance for method chaining.
      */
-    func setBaseParameters(_ baseParameters: SignatureParameters) -> SignatureParametersFactory {
+    public func setBaseParameters(_ baseParameters: SignatureParameters) -> SignatureParametersFactory {
         self.baseParameters = baseParameters
         return self
     }
@@ -342,7 +342,7 @@ public class SignatureParametersFactory {
      * - Returns: The current instance for method chaining.
      * - Throws: An error if an unsupported algorithm is specified.
      */
-    func setBodyDigestConfig(_ bodyDigestAlgorithm: String?, required: Bool) throws -> SignatureParametersFactory {
+    public func setBodyDigestConfig(_ bodyDigestAlgorithm: String?, required: Bool) throws -> SignatureParametersFactory {
         if let algorithm = bodyDigestAlgorithm {
             guard algorithm == ApproovDefaultMessageSigning.DIGEST_SHA256 ||
                   algorithm == ApproovDefaultMessageSigning.DIGEST_SHA512 else {
@@ -361,7 +361,7 @@ public class SignatureParametersFactory {
      *
      * - Returns: The current instance for method chaining.
      */
-    func setUseInstallMessageSigning() -> SignatureParametersFactory {
+    public func setUseInstallMessageSigning() -> SignatureParametersFactory {
         self.useAccountMessageSigning = false
         return self
     }
@@ -371,7 +371,7 @@ public class SignatureParametersFactory {
      *
      * - Returns: The current instance for method chaining.
      */
-    func setUseAccountMessageSigning() -> SignatureParametersFactory {
+    public func setUseAccountMessageSigning() -> SignatureParametersFactory {
         self.useAccountMessageSigning = true
         return self
     }
@@ -382,7 +382,7 @@ public class SignatureParametersFactory {
      * - Parameter addCreated: Whether to add the "created" field.
      * - Returns: The current instance for method chaining.
      */
-    func setAddCreated(_ addCreated: Bool) -> SignatureParametersFactory {
+    public func setAddCreated(_ addCreated: Bool) -> SignatureParametersFactory {
         self.addCreated = addCreated
         return self
     }
@@ -393,7 +393,7 @@ public class SignatureParametersFactory {
      * - Parameter expiresLifetime: The expiration lifetime in seconds. If <=0, no expiration is added.
      * - Returns: The current instance for method chaining.
      */
-    func setExpiresLifetime(_ expiresLifetime: Int64) -> SignatureParametersFactory {
+    public func setExpiresLifetime(_ expiresLifetime: Int64) -> SignatureParametersFactory {
         self.expiresLifetime = expiresLifetime
         return self
     }
@@ -404,7 +404,7 @@ public class SignatureParametersFactory {
      * - Parameter addApproovTokenHeader: Whether to add the Approov token header.
      * - Returns: The current instance for method chaining.
      */
-    func setAddApproovTokenHeader(_ addApproovTokenHeader: Bool) -> SignatureParametersFactory {
+    public func setAddApproovTokenHeader(_ addApproovTokenHeader: Bool) -> SignatureParametersFactory {
         self.addApproovTokenHeader = addApproovTokenHeader
         return self
     }
@@ -415,7 +415,7 @@ public class SignatureParametersFactory {
      * - Parameter headers: The headers to add.
      * - Returns: The current instance for method chaining.
      */
-    func addOptionalHeaders(_ headers: [String]) -> SignatureParametersFactory {
+    public func addOptionalHeaders(_ headers: [String]) -> SignatureParametersFactory {
         self.optionalHeaders.append(contentsOf: headers)
         return self
     }
@@ -430,8 +430,6 @@ public class SignatureParametersFactory {
      * - Throws: An error if required parameters cannot be generated.
      */
     func buildSignatureParameters(provider: ApproovURLSessionComponentProvider, changes: ApproovRequestMutations) throws -> SignatureParameters {
-        // init(base: SignatureParameters) {
-        //     private var baseParameters: SignatureParameters?
         var requestParameters: SignatureParameters
         if baseParameters == nil {
             requestParameters = SignatureParameters()
@@ -475,6 +473,9 @@ public class SignatureParametersFactory {
     /**
      * Generates a body digest for the request if possible.
      *
+     * This method updates the provider's request with the generated body digest in the header "Content-Digest".
+     * TODO: This is confusing and should be improved in the future.
+     *
      * - Parameters:
      *   - provider: The component provider for the request.
      *   - requestParameters: The signature parameters to update.
@@ -510,6 +511,7 @@ public class SignatureParametersFactory {
                 throw ApproovError.permanentError(message: "Failed to serialize Content-Digest header")
             }
             request.addValue(digestHeader, forHTTPHeaderField: "Content-Digest")
+            provider.setRequest(request)
         } catch let error {
             throw ApproovError.permanentError(message: "Failed to serialize Content-Digest header: \(error)")
         }
@@ -541,7 +543,7 @@ public class SignatureParametersFactory {
             }
             return data
         }
-        return nil
+        return Data()
     }
 
     /**
@@ -570,31 +572,31 @@ class ApproovURLSessionComponentProvider: ComponentProvider {
         self.request = request
     }
 
-    func getRequest() -> URLRequest {
+    public func getRequest() -> URLRequest {
         return request
     }
 
-    func setRequest(_ newRequest: URLRequest) {
+    public func setRequest(_ newRequest: URLRequest) {
         self.request = newRequest
     }
 
-    func getMethod() -> String {
+    public func getMethod() -> String {
         return request.httpMethod ?? "GET"
     }
 
-    func getAuthority() -> String {
+    public func getAuthority() -> String {
         return request.url?.host ?? ""
     }
 
-    func getScheme() -> String {
+    public func getScheme() -> String {
         return request.url?.scheme ?? "http"
     }
 
-    func getTargetUri() -> String {
+    public func getTargetUri() -> String {
         return request.url?.absoluteString ?? ""
     }
 
-    func getRequestTarget() -> String {
+    public func getRequestTarget() -> String {
         var target = getPath()
         if let query = request.url?.query {
             target += "?\(query)"
@@ -602,15 +604,15 @@ class ApproovURLSessionComponentProvider: ComponentProvider {
         return target
     }
 
-    func getPath() -> String {
+    public func getPath() -> String {
         return request.url?.path ?? ""
     }
 
-    func getQuery() -> String {
+    public func getQuery() -> String {
         return request.url?.query ?? ""
     }
 
-    func getQueryParam(name: String) -> String? {
+    public func getQueryParam(name: String) -> String? {
         guard let url = request.url,
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let queryItems = components.queryItems else {
@@ -628,18 +630,18 @@ class ApproovURLSessionComponentProvider: ComponentProvider {
         return values.first
     }
 
-    func hasField(name: String) -> Bool {
+    public func hasField(name: String) -> Bool {
         return request.value(forHTTPHeaderField: name) != nil
     }
 
-    func getField(name: String) -> String? {
+    public func getField(name: String) -> String? {
         guard let value = request.value(forHTTPHeaderField: name) else {
             return nil
         }
         return ApproovURLSessionComponentProvider.combineFieldValues(fields: [value])
     }
 
-    func hasBody() -> Bool {
+    public func hasBody() -> Bool {
         return request.httpBody != nil || request.httpBodyStream != nil
     }
 }
