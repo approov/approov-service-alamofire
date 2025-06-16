@@ -473,8 +473,7 @@ public class SignatureParametersFactory {
     /**
      * Generates a body digest for the request if possible.
      *
-     * This method updates the provider's request with the generated body digest in the header "Content-Digest".
-     * TODO: This is confusing and should be improved in the future.
+     * Warning: This method updates the provider's request with the generated body digest in the header "Content-Digest".
      *
      * - Parameters:
      *   - provider: The component provider for the request.
