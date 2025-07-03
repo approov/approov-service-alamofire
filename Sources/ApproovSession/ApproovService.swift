@@ -684,6 +684,7 @@ public class ApproovService {
         var hasChanges = false
         var setTokenHeaderKey: String?
         var setTokenHeaderValue: String?
+        // All paths through this switch statement must set response.decision
         switch approovResult.status {
         case ApproovTokenFetchStatus.success:
             // go ahead and make the API call and add the Approov token header
@@ -700,13 +701,15 @@ public class ApproovService {
         case ApproovTokenFetchStatus.noNetwork,
             ApproovTokenFetchStatus.poorNetwork,
             ApproovTokenFetchStatus.mitmDetected:
-            // we are unable to get the Approov token due to network conditions so the request can
-            // be retried by the user later
+            // we are unable to get the Approov token due to network conditions
             if !proceedOnNetworkFail {
+                // unless required to proceed; the request can be retried by the user later
                 response.decision = .ShouldRetry
                 response.error = ApproovError.networkingError(message: response.sdkMessage)
                 return response
             }
+            // otherwise, proceed with the request but without the Approov token header
+            response.decision = .ShouldProceed
         case ApproovTokenFetchStatus.unprotectedURL,
             ApproovTokenFetchStatus.unknownURL,
             ApproovTokenFetchStatus.noApproovService:
