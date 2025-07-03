@@ -2,7 +2,7 @@
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 import PackageDescription
 // Release tag
-let releaseTAG = "3.4.0"
+let releaseTAG = "3.4.1"
 // SDK package version (used for both iOS and watchOS)
 let sdkVersion = "3.4.0"
 
