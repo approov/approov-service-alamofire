@@ -7,7 +7,7 @@ let releaseTAG = "3.5.0"
 let sdkVersion = "3.5.0"
 
 let package = Package(
-    name: "ApproovSession",
+    name: "ApproovAFSession",
     platforms: [
         .iOS(.v11),
         .watchOS(.v9)
