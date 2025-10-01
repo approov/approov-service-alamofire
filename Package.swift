@@ -23,7 +23,8 @@ let package = Package(
     dependencies: [
         // Package's external dependencies and from where they can be fetched:
         .package(url: "https://github.com/Alamofire/Alamofire.git", .upToNextMajor(from: "5.2.0")),
-        .package(url: "https://github.com/apple/swift-http-structured-headers.git", from: "1.0.0")
+        .package(url: "https://github.com/apple/swift-http-structured-headers.git", from: "1.0.0"),
+        .package(url: "https://github.com/approov/approov-ios-sdk.git", from: "3.5.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -31,18 +32,12 @@ let package = Package(
         .target(
             name: "ApproovSession",
             dependencies: [
-                "Approov",
-                "Alamofire",
+                .product(name: "Approov", package: "approov-ios-sdk"),
+                .product(name: "Alamofire", package: "Alamofire"),
                 .product(name: "RawStructuredFieldValues", package: "swift-http-structured-headers")
             ],
             path: "Sources/ApproovSession",  // Point to the shared source code
             exclude: ["README.md", "LICENSE"]
-        ),
-        // Binary target for the merged xcframework
-        .binaryTarget(
-            name: "Approov",
-            url: "https://github.com/approov/approov-ios-sdk/releases/download/\(sdkVersion)/Approov.xcframework.zip",
-            checksum: "c2902922d07df7cdc74b4b5ec70353bfc88339baee7dd94556170c565731da01" // SHA256 checksum of the xcframework zip file
         )
     ]
 )
