@@ -15,10 +15,10 @@ let package = Package(
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
-            name: "ApproovSession",
+            name: "ApproovAFSession",
             targets: ["ApproovAFSession"]
         ),
-        .library(name: "ApproovSessionDynamic", type: .dynamic, targets: ["ApproovAFSession"])
+        .library(name: "ApproovAFSessionDynamic", type: .dynamic, targets: ["ApproovAFSession"])
     ],
     dependencies: [
         // Package's external dependencies and from where they can be fetched:
