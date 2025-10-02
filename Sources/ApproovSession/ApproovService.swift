@@ -144,7 +144,6 @@ public class ApproovService {
                     let nsError = error as NSError
                     if nsError.code == 0, nsError.domain == "Foundation._GenericObjCError" {
                         os_log("ApproovService: Ignoring initialization error in Approov SDK: %@", type: .error, nsError.localizedDescription)
-                        isInitialized = true
                     } else {
                         throw ApproovError.initializationError(message: "Error initializing Approov SDK: \(nsError.localizedDescription)")
                     }
