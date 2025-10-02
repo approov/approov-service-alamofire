@@ -141,11 +141,12 @@ public class ApproovService {
                     }
                 } catch let error {
                     // If the error is due to the SDK being initilized already, we ignore it otherwise we throw
-                    if error.localizedDescription.localizedCaseInsensitiveContains("Approov SDK already initialized") {
-                        os_log("ApproovService: Ignoring initialization error in Approov SDK: %@", type: .error, error.localizedDescription)
+                    let nsError = error as NSError
+                    if nsError.code == 0, nsError.domain == "Foundation._GenericObjCError" {
+                        os_log("ApproovService: Ignoring initialization error in Approov SDK: %@", type: .error, nsError.localizedDescription)
                         isInitialized = true
                     } else {
-                        throw ApproovError.initializationError(message: "Error initializing Approov SDK: \(error.localizedDescription)")
+                        throw ApproovError.initializationError(message: "Error initializing Approov SDK: \(nsError.localizedDescription)")
                     }
                 }
                 isInitialized = true
