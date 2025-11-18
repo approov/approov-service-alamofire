@@ -21,6 +21,6 @@ Pod::Spec.new do |s|
   s.frameworks = 'Approov'
   # Pod target xcconfig settings if required
   s.pod_target_xcconfig = {
-    'VALID_ARCHS' => 'arm64 x86_64 arm64_32 x86_64' # Valid architectures
+    'VALID_ARCHS' => 'arm64 x86_64 arm64_32' # Valid architectures
   }
 end
