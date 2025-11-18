@@ -727,8 +727,9 @@ public class ApproovService {
             hasChanges = true
             setTokenHeaderKey = tokenHeader
             setTokenHeaderValue = tokenPrefix + approovResult.token
+            
+            let traceID = approovResult.traceID
             if let traceHeader = stateQueue.sync(execute: { approovTraceIDHeader }),
-               let traceID = approovResult.traceID,
                !traceHeader.isEmpty,
                !traceID.isEmpty {
                 hasChanges = true
