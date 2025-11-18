@@ -22,6 +22,7 @@ import Foundation
  */
 public class ApproovRequestMutations {
     private var tokenHeaderKey: String?
+    private var traceIDHeaderKey: String?
     private var substitutionHeaderKeys: [String] = []
     private var originalURL: String?
     private var substitutionQueryParamKeys: [String] = []
@@ -42,6 +43,24 @@ public class ApproovRequestMutations {
      */
     func setTokenHeaderKey(_ tokenHeaderKey: String) {
         self.tokenHeaderKey = tokenHeaderKey
+    }
+
+    /**
+     * Gets the header key used for the optional Approov TraceID debug header.
+     *
+     * - Returns: The Approov TraceID header key, or nil if the header was not added.
+     */
+    func getTraceIDHeaderKey() -> String? {
+        return traceIDHeaderKey
+    }
+
+    /**
+     * Sets the header key used for the optional Approov TraceID debug header.
+     *
+     * - Parameter traceIDHeaderKey: The Approov TraceID header key.
+     */
+    func setTraceIDHeaderKey(_ traceIDHeaderKey: String?) {
+        self.traceIDHeaderKey = traceIDHeaderKey
     }
 
     /**
