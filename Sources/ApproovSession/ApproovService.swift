@@ -97,6 +97,9 @@ public class ApproovService {
     // Approov token custom prefix: any prefix to be added such as "Bearer "
     private static var approovTokenPrefix = ""
 
+    // Approov TraceID optional header
+    private static var approovTraceIDHeader: String? = "Approov-TraceID"
+
     // the target for request processing interceptorExtensions
     private static var interceptorExtensions: ApproovInterceptorExtensions? = nil
 
@@ -203,6 +206,30 @@ public class ApproovService {
             approovTokenHeader = header
             approovTokenPrefix = prefix
             os_log("ApproovService: setApproovHeader: %@", type: .debug, header, prefix)
+        }
+    }
+
+    /**
+     * Sets the header name used to provide the optional Approov TraceID debug value. Passing
+     * nil disables the TraceID header.
+     *
+     * @param header is the header to place the Approov TraceID on, or nil to disable it
+     */
+    public static func setApproovTraceIDHeader(header: String?) {
+        stateQueue.sync {
+            approovTraceIDHeader = header
+            os_log("ApproovService: setApproovTraceIDHeader: %@", type: .debug, header ?? "nil")
+        }
+    }
+
+    /**
+     * Gets the header that is used to add the optional Approov TraceID debug value.
+     *
+     * @return the name of the header used for the Approov TraceID, or nil if disabled
+     */
+    public static func getApproovTraceIDHeader() -> String? {
+        return stateQueue.sync {
+            return approovTraceIDHeader
         }
     }
 
@@ -684,6 +711,8 @@ public class ApproovService {
         var hasChanges = false
         var setTokenHeaderKey: String?
         var setTokenHeaderValue: String?
+        var setTraceIDHeaderKey: String?
+        var setTraceIDHeaderValue: String?
         // All paths through this switch statement must set response.decision
         switch approovResult.status {
         case ApproovTokenFetchStatus.success:
@@ -698,6 +727,14 @@ public class ApproovService {
             hasChanges = true
             setTokenHeaderKey = tokenHeader
             setTokenHeaderValue = tokenPrefix + approovResult.token
+            if let traceHeader = stateQueue.sync(execute: { approovTraceIDHeader }),
+               let traceID = approovResult.traceID,
+               !traceHeader.isEmpty,
+               !traceID.isEmpty {
+                hasChanges = true
+                setTraceIDHeaderKey = traceHeader
+                setTraceIDHeaderValue = traceID
+            }
         case ApproovTokenFetchStatus.noNetwork,
             ApproovTokenFetchStatus.poorNetwork,
             ApproovTokenFetchStatus.mitmDetected:
@@ -870,6 +907,11 @@ public class ApproovService {
                let tokenHeaderValue = setTokenHeaderValue {
                 response.request.setValue(tokenHeaderValue, forHTTPHeaderField: tokenHeaderKey)
                 changes.setTokenHeaderKey(tokenHeaderKey);
+            }
+            if let traceIDHeaderKey = setTraceIDHeaderKey,
+               let traceIDHeaderValue = setTraceIDHeaderValue {
+                response.request.setValue(traceIDHeaderValue, forHTTPHeaderField: traceIDHeaderKey)
+                changes.setTraceIDHeaderKey(traceIDHeaderKey)
             }
             if (!setSubstitutionHeaders.isEmpty) {
                 for (header, value) in setSubstitutionHeaders {

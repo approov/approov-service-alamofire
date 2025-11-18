@@ -296,6 +296,7 @@ public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
             .setAddCreated(true)
             .setExpiresLifetime(defaultExpiresLifetime)
             .setAddApproovTokenHeader(true)
+            .setAddApproovTraceIDHeader(true)
             .addOptionalHeaders(["Authorization", "Content-Length", "Content-Type"])
         do {
             try defaultSignatureParametersFactory.setBodyDigestConfig(ApproovDefaultMessageSigning.DIGEST_SHA256, required: false)
@@ -320,6 +321,7 @@ public class SignatureParametersFactory {
     private var addCreated: Bool = false
     private var expiresLifetime: Int64 = 0
     private var addApproovTokenHeader: Bool = false
+    private var addApproovTraceIDHeader: Bool = false
     private var optionalHeaders: [String] = []
 
     /**
@@ -410,6 +412,17 @@ public class SignatureParametersFactory {
     }
 
     /**
+     * Sets whether the Approov TraceID header should be added to the signature parameters.
+     *
+     * - Parameter addApproovTraceIDHeader: Whether to add the Approov TraceID header.
+     * - Returns: The current instance for method chaining.
+     */
+    public func setAddApproovTraceIDHeader(_ addApproovTraceIDHeader: Bool) -> SignatureParametersFactory {
+        self.addApproovTraceIDHeader = addApproovTraceIDHeader
+        return self
+    }
+
+    /**
      * Adds optional headers to the signature parameters.
      *
      * - Parameter headers: The headers to add.
@@ -450,6 +463,10 @@ public class SignatureParametersFactory {
 
         if addApproovTokenHeader, let tokenHeaderKey = changes.getTokenHeaderKey() {
             requestParameters.addComponentIdentifier(tokenHeaderKey)
+        }
+
+        if addApproovTraceIDHeader, let traceIDHeaderKey = changes.getTraceIDHeaderKey() {
+            requestParameters.addComponentIdentifier(traceIDHeaderKey)
         }
 
         for headerName in optionalHeaders {
