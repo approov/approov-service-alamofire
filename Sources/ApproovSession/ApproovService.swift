@@ -109,7 +109,7 @@ public class ApproovService {
 
     // map of URL regexs that should be excluded from any Approov protection, mapped to the compiled Pattern
     private static var exclusionURLRegexs: Dictionary<String, NSRegularExpression> = Dictionary()
-
+    
     /**
      * Initializes the SDK with the config obtained using `approov sdk -getConfigString` or
      * in the original onboarding email. Note the initializer function should only ever be called once.
@@ -153,6 +153,19 @@ public class ApproovService {
                 Approov.setUserProperty("approov-service-urlsession")
             }
         }
+    }
+
+    /**
+     * Gets the last ARC (Approov Rejection Code) code.
+     *
+     * @return String of the last ARC or empty string if there was none
+     */
+    public func getLastARC() -> String{
+        let result: ApproovTokenFetchResult = Approov.fetchTokenAndWait("approov.io")
+        if result.token.count > 0{
+            return result.arc
+        }
+        return ""
     }
 
     /**
