@@ -100,9 +100,6 @@ public class ApproovService {
     // the target for request processing interceptorExtensions
     private static var interceptorExtensions: ApproovInterceptorExtensions? = nil
 
-    // stores the last ARC value for retrieval
-    private static var lastARC: String? = nil
-
     // map of headers that should have their values substituted for secure strings, mapped to their
     // required prefixes
     private static var substitutionHeaders: Dictionary<String, String> = Dictionary()
@@ -112,6 +109,7 @@ public class ApproovService {
 
     // map of URL regexs that should be excluded from any Approov protection, mapped to the compiled Pattern
     private static var exclusionURLRegexs: Dictionary<String, NSRegularExpression> = Dictionary()
+    
     /**
      * Initializes the SDK with the config obtained using `approov sdk -getConfigString` or
      * in the original onboarding email. Note the initializer function should only ever be called once.
