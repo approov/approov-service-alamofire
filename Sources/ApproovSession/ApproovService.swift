@@ -160,7 +160,7 @@ public class ApproovService {
      *
      * @return String of the last ARC or empty string if there was none
      */
-    public func getLastARC() -> String{
+    public static func getLastARC() -> String{
         let result: ApproovTokenFetchResult = Approov.fetchTokenAndWait("approov.io")
         if result.token.count > 0{
             return result.arc
