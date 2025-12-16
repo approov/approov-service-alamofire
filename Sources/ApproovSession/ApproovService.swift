@@ -163,9 +163,10 @@ public class ApproovService {
      * - Parameter arc: The ARC code to store (may be nil).
      */
     public static func setLastARC(result: ApproovTokenFetchResult) {
-        // Determine if ARC code should be returned
         var arc = ""
-        if(result.status != ApproovTokenFetchStatus.noApproovService){
+        // Return empty string if there are connection problem during fetch
+        if(result.status != ApproovTokenFetchStatus.noApproovService
+        && result.status != ApproovTokenFetchStatus.noNetwork){
             arc = result.arc
         }
         // Update ARC
