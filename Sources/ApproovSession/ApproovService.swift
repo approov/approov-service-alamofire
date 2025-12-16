@@ -156,9 +156,9 @@ public class ApproovService {
     }
 
     /**
-     * Gets the last ARC code returned by the Approov SDK (thread-safe).
+     * Gets the last ARC (Approov Rejection Code) code.
      *
-     * - Returns: The last stored ARC code, or nil if none has been stored.
+     * @return String of the last ARC or empty string if there was none
      */
     public func getLastARC() -> String{
         let result: ApproovTokenFetchResult = Approov.fetchTokenAndWait("approov.io")
