@@ -156,15 +156,26 @@ public class ApproovService {
     }
 
     /**
-     * Gets the last ARC (Approov Rejection Code) code.
+     * Gets the last ARC (Attestation Response Code) code.
      *
      * @return String of the last ARC or empty string if there was none
      */
-    public static func getLastARC() -> String{
-        let result: ApproovTokenFetchResult = Approov.fetchTokenAndWait("approov.io")
-        if result.token.count > 0{
-            return result.arc
+    public static func getLastARC() -> String {
+        // We have to get the current config and obtain one protected API endpoint at least
+        // get the dynamic pins from Approov
+        guard let approovPins = Approov.getPins("public-key-sha256") else {
+            os_log("ApproovService: no host pinning information available", type: .error)
+            return ""
         }
+        // The approovPins contains a map of hostnames to pin strings, we just need one of them
+            if let hostname = approovPins.keys.first {
+                let result = Approov.fetchTokenAndWait(hostname)
+                // Check if a token was fetched successfully and return its arc code
+                if result.token.count > 0 {
+                    return result.arc
+                }
+            }
+        os_log("ApproovService: ARC code unavailable", type: .info)
         return ""
     }
 
