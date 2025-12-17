@@ -167,8 +167,9 @@ public class ApproovService {
             os_log("ApproovService: no host pinning information available", type: .error)
             return ""
         }
-        // The approovPins contains a map of hostnames to pin strings, we just need one of them
-            if let hostname = approovPins.keys.first {
+        // The approovPins contains a map of hostnames to pin strings.  We need to skip the '*' entry (Managed Trust Roots),
+        // and use another hostname if available.
+            if let hostname = approovPins.keys.first(where: { $0 != "*" }) {
                 let result = Approov.fetchTokenAndWait(hostname)
                 // Check if a token was fetched successfully and return its arc code
                 if result.token.count > 0 {
