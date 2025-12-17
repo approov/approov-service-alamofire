@@ -156,7 +156,7 @@ public class ApproovService {
     }
 
     /**
-     * Gets the last ARC (Approov Rejection Code) code.
+     * Gets the last ARC (Attestation Response Code) code.
      *
      * @return String of the last ARC or empty string if there was none
      */
