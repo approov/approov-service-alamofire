@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "ApproovSession"
-  s.version      = "3.5.3"
+  s.version      = "3.5.4"
   s.summary      = "Approov mobile attestation SDK"
   s.description  = <<-DESC
     Approov SDK integrates security attestation and secure string fetching for both iOS and watchOS apps.
@@ -21,6 +21,6 @@ Pod::Spec.new do |s|
   s.frameworks = 'Approov'
   # Pod target xcconfig settings if required
   s.pod_target_xcconfig = {
-    'VALID_ARCHS' => 'arm64 x86_64 arm64_32 x86_64' # Valid architectures: Note on watchOS you need to disable arm64 for device builds
+    'VALID_ARCHS' => 'arm64 x86_64 arm64_32' # Valid architectures
   }
 end
