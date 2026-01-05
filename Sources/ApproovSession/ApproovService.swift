@@ -112,7 +112,7 @@ public class ApproovService {
 
     // map of URL regexs that should be excluded from any Approov protection, mapped to the compiled Pattern
     private static var exclusionURLRegexs: Dictionary<String, NSRegularExpression> = Dictionary()
-
+    
     /**
      * Initializes the SDK with the config obtained using `approov sdk -getConfigString` or
      * in the original onboarding email. Note the initializer function should only ever be called once.
@@ -156,6 +156,31 @@ public class ApproovService {
                 Approov.setUserProperty("approov-service-urlsession")
             }
         }
+    }
+
+    /**
+     * Gets the last ARC (Attestation Response Code) code.
+     *
+     * @return String of the last ARC or empty string if there was none
+     */
+    public static func getLastARC() -> String {
+        // We have to get the current config and obtain one protected API endpoint at least
+        // get the dynamic pins from Approov
+        guard let approovPins = Approov.getPins("public-key-sha256") else {
+            os_log("ApproovService: no host pinning information available", type: .error)
+            return ""
+        }
+        // The approovPins contains a map of hostnames to pin strings.  We need to skip the '*' entry (Managed Trust Roots),
+        // and use another hostname if available.
+            if let hostname = approovPins.keys.first(where: { $0 != "*" }) {
+                let result = Approov.fetchTokenAndWait(hostname)
+                // Check if a token was fetched successfully and return its arc code
+                if result.token.count > 0 {
+                    return result.arc
+                }
+            }
+        os_log("ApproovService: ARC code unavailable", type: .info)
+        return ""
     }
 
     /**

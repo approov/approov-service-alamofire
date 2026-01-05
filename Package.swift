@@ -2,9 +2,9 @@
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 import PackageDescription
 // Release tag
-let releaseTAG = "3.5.2"
+let releaseTAG = "3.5.3"
 // SDK package version (used for both iOS and watchOS)
-let sdkVersion = "3.5.2"
+let sdkVersion = "3.5.3"
 
 let package = Package(
     name: "ApproovSession",
@@ -42,7 +42,7 @@ let package = Package(
         .binaryTarget(
             name: "Approov",
             url: "https://github.com/approov/approov-ios-sdk/releases/download/\(sdkVersion)/Approov.xcframework.zip",
-            checksum: "9e3ec6e71fbdb23d46d1475a9160e4c1ba67c52721c8df995723a00013b29726" // SHA256 checksum of the xcframework zip file
+            checksum: "acfbee9e6c8009535c070c87c0d5756c2ba8f78e7b8147d7632f12bfcb940c89" // SHA256 checksum of the xcframework zip file
         )
     ]
 )
