@@ -24,7 +24,7 @@ let package = Package(
         // Package's external dependencies and from where they can be fetched:
         .package(url: "https://github.com/Alamofire/Alamofire.git", .upToNextMajor(from: "5.2.0")),
         .package(url: "https://github.com/apple/swift-http-structured-headers.git", from: "1.0.0"),
-        .package(url: "https://github.com/approov/approov-ios-sdk.git", from: sdkVersion)
+        .package(url: "https://github.com/approov/approov-ios-sdk.git", from: Version(sdkVersion))
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
