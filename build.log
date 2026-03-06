@@ -1,0 +1,170 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild build -scheme ApproovSession -destination generic/platform=iOS
+
+Resolve Package Graph
+2026-03-06 11:43:43.235 xcodebuild[69847:2673860] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+
+
+Resolved source packages:
+  Alamofire: https://github.com/Alamofire/Alamofire.git @ 5.11.1
+  swift-http-structured-headers: https://github.com/apple/swift-http-structured-headers.git @ 1.6.0
+  ApproovSession: /Users/ivoliondov/Github/approov-service-alamofire
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (7 targets)
+    Target 'ApproovSession' in project 'ApproovSession'
+        ➜ Explicit dependency on target 'ApproovSession' in project 'ApproovSession'
+        ➜ Explicit dependency on target 'Alamofire' in project 'Alamofire'
+        ➜ Explicit dependency on target 'RawStructuredFieldValues' in project 'swift-http-structured-headers'
+    Target 'ApproovSession' in project 'ApproovSession'
+        ➜ Explicit dependency on target 'Alamofire' in project 'Alamofire'
+        ➜ Explicit dependency on target 'RawStructuredFieldValues' in project 'swift-http-structured-headers'
+    Target 'RawStructuredFieldValues' in project 'swift-http-structured-headers'
+        ➜ Explicit dependency on target 'RawStructuredFieldValues' in project 'swift-http-structured-headers'
+    Target 'RawStructuredFieldValues' in project 'swift-http-structured-headers' (no dependencies)
+    Target 'Alamofire' in project 'Alamofire'
+        ➜ Explicit dependency on target 'Alamofire' in project 'Alamofire'
+        ➜ Explicit dependency on target 'Alamofire_Alamofire' in project 'Alamofire'
+    Target 'Alamofire' in project 'Alamofire'
+        ➜ Explicit dependency on target 'Alamofire_Alamofire' in project 'Alamofire'
+    Target 'Alamofire_Alamofire' in project 'Alamofire' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ReadFileContents /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/share/docc/features.json
+
+Build description signature: 6acd1b3399e66ef7f409e18a269b29b1
+Build description path: /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/XCBuildData/6acd1b3399e66ef7f409e18a269b29b1.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk /Users/ivoliondov/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.2-23C53-3794476bd08197c3e2abd9bb477ef7f7.sdkstatcache
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -o /Users/ivoliondov/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.2-23C53-3794476bd08197c3e2abd9bb477ef7f7.sdkstatcache
+
+ProcessInfoPlistFile /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos/Alamofire_Alamofire.bundle/Info.plist /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/Alamofire.build/Debug-iphoneos/Alamofire_Alamofire.build/empty-Alamofire_Alamofire.plist (in target 'Alamofire_Alamofire' from project 'Alamofire')
+    cd /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/SourcePackages/checkouts/Alamofire
+    builtin-infoPlistUtility /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/Alamofire.build/Debug-iphoneos/Alamofire_Alamofire.build/empty-Alamofire_Alamofire.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos/Alamofire_Alamofire.bundle/Info.plist
+
+SwiftDriver ApproovSession normal arm64 com.apple.xcode.tools.swift.compiler (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name ApproovSession -Onone -enforce-exclusivity\=checked @/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession.SwiftFileList -DSWIFT_PACKAGE -DDEBUG -DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE -DXcode -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -target arm64-apple-ios12.0 -g -module-cache-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib -F /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos/PackageFrameworks -F /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos/PackageFrameworks -F /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Developer/Library/Frameworks -c -j12 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/ivoliondov/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.2-23C53-3794476bd08197c3e2abd9bb477ef7f7.sdkstatcache -output-file-map /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/ivoliondov/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession_const_extract_protocols.json -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos/include -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/DerivedSources-normal/arm64 -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/DerivedSources/arm64 -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession-Swift.h -working-directory /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode -experimental-emit-module-separately -disable-cmo
+
+SwiftDriver Alamofire normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Alamofire' from project 'Alamofire')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Alamofire -Onone -enforce-exclusivity\=checked @/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/Alamofire.build/Debug-iphoneos/Alamofire.build/Objects-normal/arm64/Alamofire.SwiftFileList -DSWIFT_PACKAGE -DDEBUG -DSWIFT_MODULE_RESOURCE_BUNDLE_AVAILABLE -DXcode -enable-upcoming-feature ExistentialAny -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -target arm64-apple-ios12.0 -g -module-cache-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -suppress-warnings -index-store-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib -F /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Developer/Library/Frameworks -c -j12 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/ivoliondov/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.2-23C53-3794476bd08197c3e2abd9bb477ef7f7.sdkstatcache -output-file-map /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/Alamofire.build/Debug-iphoneos/Alamofire.build/Objects-normal/arm64/Alamofire-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/Alamofire.build/Debug-iphoneos/Alamofire.build/Objects-normal/arm64/Alamofire.swiftmodule -user-module-version 5.11.1 -validate-clang-modules-once -clang-build-session-file /Users/ivoliondov/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -package-name alamofire -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/Alamofire.build/Debug-iphoneos/Alamofire.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/Alamofire.build/Debug-iphoneos/Alamofire.build/Objects-normal/arm64/Alamofire_const_extract_protocols.json -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos/include -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/Alamofire.build/Debug-iphoneos/Alamofire.build/DerivedSources-normal/arm64 -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/Alamofire.build/Debug-iphoneos/Alamofire.build/DerivedSources/arm64 -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/Alamofire.build/Debug-iphoneos/Alamofire.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/Alamofire.build/Debug-iphoneos/Alamofire.build/Objects-normal/arm64/Alamofire-Swift.h -working-directory /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode -experimental-emit-module-separately -disable-cmo
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ ApproovSession (in target 'ApproovSession' from project 'ApproovSession')
+EmitSwiftModule normal arm64 (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+/Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovService.swift:107:38: error: cannot find type 'ApproovLogLevel' in scope
+    private static var loggingLevel: ApproovLogLevel = .info
+                                     ^~~~~~~~~~~~~~~
+/Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovService.swift:322:49: error: cannot find type 'ApproovLogLevel' in scope
+    public static func setLoggingLevel(_ level: ApproovLogLevel) {
+                                                ^~~~~~~~~~~~~~~
+/Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovService.swift:342:69: error: cannot find type 'ApproovInterceptorExtensions' in scope
+    public static func setApproovInterceptorExtensions(_ callbacks: ApproovInterceptorExtensions?) {
+                                                                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovSession.swift:29:15: warning: non-final class 'ApproovInterceptor' cannot conform to 'Sendable'; use '@unchecked Sendable'; this is an error in the Swift 6 language mode
+private class ApproovInterceptor: RequestInterceptor {
+              ^
+/Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovSession.swift:49:14: warning: class 'ApproovSession' must restate inherited '@unchecked Sendable' conformance
+public class ApproovSession: Session {
+             ^
+                                    , @unchecked Sendable
+/Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovTrustManager.swift:221:14: warning: class 'ApproovTrustManager' must restate inherited '@unchecked Sendable' conformance
+public class ApproovTrustManager: ServerTrustManager {
+             ^
+                                                    , @unchecked Sendable
+
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -emit-module -experimental-skip-non-inlinable-function-bodies-without-types /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovDefaultMessageSigning.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovRequestMutations.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovService.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovServiceMutator.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovSession.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovTrustManager.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/http-sfv/SFV.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/http-sfv/StringItem.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/sig/ComponentProvider.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/sig/SignatureBaseBuilder.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/sig/SignatureParameters.swift -target arm64-apple-ios12.0 -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libFoundationMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#FoundationMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libObservationMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#ObservationMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libSwiftMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#SwiftMacros -disable-implicit-swift-modules -Xcc -fno-implicit-modules -Xcc -fno-implicit-module-maps -explicit-swift-module-map-file /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession-dependencies-1.json -Xllvm -aarch64-use-tbi -enable-objc-interop -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk -I /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib -F /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos/PackageFrameworks -F /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos/PackageFrameworks -F /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks -F /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.2.sdk/Developer/Library/Frameworks -no-color-diagnostics -Xcc -fno-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=4 -module-cache-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -swift-version 5 -enforce-exclusivity\=checked -Onone -D SWIFT_PACKAGE -D DEBUG -D SWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE -D Xcode -serialize-debugging-options -const-gather-protocols-file /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession_const_extract_protocols.json -enable-experimental-feature DebugDescriptionMacro -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/ivoliondov/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode -enable-anonymous-context-mangled-names -file-compilation-dir /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -Xcc -ivfsstatcache -Xcc /Users/ivoliondov/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.2-23C53-3794476bd08197c3e2abd9bb477ef7f7.sdkstatcache -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/swift-overrides.hmap -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Products/Debug-iphoneos/include -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/DerivedSources-normal/arm64 -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/DerivedSources/arm64 -Xcc -I/Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/DerivedSources -Xcc -DSWIFT_PACKAGE -Xcc -DDEBUG\=1 -no-auto-bridging-header-chaining -module-name ApproovSession -frontend-parseable-output -disable-clang-spi -target-sdk-version 26.2 -target-sdk-name iphoneos26.2 -clang-target arm64-apple-ios26.2 -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -emit-module-doc-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession.swiftdoc -emit-module-source-info-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession.swiftsourceinfo -emit-objc-header-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession-Swift.h -serialize-diagnostics-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession-primary-emit-module.dia -emit-dependencies-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession-primary-emit-module.d -o /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession.swiftmodule -emit-abi-descriptor-path /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/Build/Intermediates.noindex/ApproovSession.build/Debug-iphoneos/ApproovSession.build/Objects-normal/arm64/ApproovSession.abi.json
+SwiftCompile normal arm64 Compiling\ ApproovServiceMutator.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovServiceMutator.swift (in target 'ApproovSession' from project 'ApproovSession')
+SwiftCompile normal arm64 /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovServiceMutator.swift (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+
+SwiftCompile normal arm64 Compiling\ ApproovService.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovService.swift (in target 'ApproovSession' from project 'ApproovSession')
+SwiftCompile normal arm64 /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovService.swift (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+
+SwiftCompile normal arm64 Compiling\ SignatureBaseBuilder.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/sig/SignatureBaseBuilder.swift (in target 'ApproovSession' from project 'ApproovSession')
+SwiftCompile normal arm64 /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/sig/SignatureBaseBuilder.swift (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+
+SwiftCompile normal arm64 Compiling\ ApproovRequestMutations.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovRequestMutations.swift (in target 'ApproovSession' from project 'ApproovSession')
+
+SwiftCompile normal arm64 /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovRequestMutations.swift (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+
+SwiftCompile normal arm64 Compiling\ SFV.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/http-sfv/SFV.swift (in target 'ApproovSession' from project 'ApproovSession')
+
+SwiftCompile normal arm64 /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/http-sfv/SFV.swift (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+
+SwiftCompile normal arm64 Compiling\ ApproovDefaultMessageSigning.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovDefaultMessageSigning.swift (in target 'ApproovSession' from project 'ApproovSession')
+
+SwiftCompile normal arm64 /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovDefaultMessageSigning.swift (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+
+SwiftCompile normal arm64 Compiling\ ApproovSession.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovSession.swift (in target 'ApproovSession' from project 'ApproovSession')
+SwiftCompile normal arm64 /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovSession.swift (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+
+SwiftCompile normal arm64 Compiling\ ComponentProvider.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/sig/ComponentProvider.swift (in target 'ApproovSession' from project 'ApproovSession')
+
+SwiftCompile normal arm64 /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/sig/ComponentProvider.swift (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+
+SwiftCompile normal arm64 Compiling\ SignatureParameters.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/sig/SignatureParameters.swift (in target 'ApproovSession' from project 'ApproovSession')
+
+SwiftCompile normal arm64 /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/util/sig/SignatureParameters.swift (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+
+SwiftCompile normal arm64 Compiling\ ApproovTrustManager.swift /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovTrustManager.swift (in target 'ApproovSession' from project 'ApproovSession')
+SwiftCompile normal arm64 /Users/ivoliondov/Github/approov-service-alamofire/Sources/ApproovSession/ApproovTrustManager.swift (in target 'ApproovSession' from project 'ApproovSession')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ Alamofire (in target 'Alamofire' from project 'Alamofire')
+
+EmitSwiftModule normal arm64 (in target 'Alamofire' from project 'Alamofire')
+    cd /Users/ivoliondov/Github/approov-service-alamofire/.swiftpm/xcode
+    
+
+SwiftCompile normal arm64 Compiling\ DataStreamRequest.swift /Users/ivoliondov/Library/Developer/Xcode/DerivedData/approov-service-alamofire-gjppxminylxofacdgcdkocrzuaft/SourcePackages/checkouts/Alamofire/Source/Core/DataStreamRequest.swift (in target 'Alamofire' from project 'Alamofire')
+
+** BUILD FAILED **
+
+
+The following build commands failed:
+	EmitSwiftModule normal arm64 (in target 'ApproovSession' from project 'ApproovSession')
+	SwiftEmitModule normal arm64 Emitting\ module\ for\ ApproovSession (in target 'ApproovSession' from project 'ApproovSession')
+	Building workspace approov-service-alamofire with scheme ApproovSession
+(3 failures)

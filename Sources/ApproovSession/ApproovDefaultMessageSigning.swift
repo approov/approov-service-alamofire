@@ -132,7 +132,9 @@ public class ApproovDefaultMessageSigning: ApproovServiceMutator {
                 sigId = "install"
                 guard let base64Signature = ApproovService.getInstallMessageSignature(message: message),
                       let decodedSignature = Data(base64Encoded: base64Signature) else {
-                    os_log("ApproovService: install message signature unavailable, skipping signing", type: .info)
+                    if ApproovService.loggingLevel >= .info {
+                        os_log("ApproovService: install message signature unavailable, skipping signing", type: .info)
+                    }
                     return request
                 }
                 // decode the signature from ASN.1 DER format
