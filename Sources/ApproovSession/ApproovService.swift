@@ -104,7 +104,8 @@ public class ApproovService {
     private static var useApproovStatusIfNoToken = false
 
     // whether to log to the unified logging system
-    private static var loggingLevel: ApproovLogLevel = .info
+    // internal access so ApproovDefaultMessageSigning can read the level
+    static var loggingLevel: ApproovLogLevel = .info
 
     // map of headers that should have their values substituted for secure strings, mapped to their
     // required prefixes
