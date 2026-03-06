@@ -100,6 +100,9 @@ public class ApproovService {
     // the target for request processing serviceMutator
     private static var serviceMutator: ApproovServiceMutator = ApproovServiceMutatorDefault.shared
 
+    // whether to place ApproovTokenFetchStatus inside the Token header when an error occurs or a token is empty
+    private static var useApproovStatusIfNoToken = false
+
     // map of headers that should have their values substituted for secure strings, mapped to their
     // required prefixes
     private static var substitutionHeaders: Dictionary<String, String> = Dictionary()
@@ -266,6 +269,21 @@ public class ApproovService {
             } else {
                 serviceMutator = ApproovServiceMutatorDefault.shared
             }
+        }
+    }
+
+    /**
+     * Sets a flag indicating if the Approov fetch status should be used as the token header value
+     * if the actual token fetch fails or returns an empty token. This allows your backend to
+     * distinguish between different failure reasons (e.g., NO_NETWORK, MITM_DETECTED) even when
+     * the Approov-Token would otherwise be empty or missing.
+     *
+     * @param useStatus the use status boolean
+     */
+    public static func setUseApproovStatusIfNoToken(_ useStatus: Bool) {
+        stateQueue.sync {
+            useApproovStatusIfNoToken = useStatus
+            os_log("ApproovService: setUseApproovStatusIfNoToken %@", type: .info, useStatus ? "YES" : "NO")
         }
     }
 
@@ -721,51 +739,46 @@ public class ApproovService {
         var setTokenHeaderValue: String?
         var setTraceIDHeaderKey: String?
         var setTraceIDHeaderValue: String?
-        // All paths through this switch statement must set response.decision
-        switch approovResult.status {
-        case ApproovTokenFetchStatus.success:
-            // go ahead and make the API call and add the Approov token header
-            response.decision = .ShouldProceed
-            let tokenHeader = stateQueue.sync {
-                return approovTokenHeader
-            }
-            let tokenPrefix = stateQueue.sync {
-                return approovTokenPrefix
-            }
+
+        // All paths proceeding past the Mutator imply the request should continue
+        response.decision = .ShouldProceed
+
+        let tokenHeader = stateQueue.sync { return approovTokenHeader }
+        let tokenPrefix = stateQueue.sync { return approovTokenPrefix }
+        let useStatus = stateQueue.sync { return useApproovStatusIfNoToken }
+
+        if approovResult.status == .success {
+            // Success Path
             hasChanges = true
             setTokenHeaderKey = tokenHeader
-            setTokenHeaderValue = tokenPrefix + approovResult.token
+            
+            if useStatus && approovResult.token.isEmpty {
+                setTokenHeaderValue = tokenPrefix + Approov.string(from: approovResult.status)
+            } else {
+                setTokenHeaderValue = tokenPrefix + approovResult.token
+            }
             
             let traceID = approovResult.traceID
             if let traceHeader = stateQueue.sync(execute: { approovTraceIDHeader }),
-               !traceHeader.isEmpty,
-               !traceID.isEmpty {
+               !traceHeader.isEmpty, !traceID.isEmpty {
                 hasChanges = true
                 setTraceIDHeaderKey = traceHeader
                 setTraceIDHeaderValue = traceID
             }
-        case ApproovTokenFetchStatus.noNetwork,
-            ApproovTokenFetchStatus.poorNetwork,
-            ApproovTokenFetchStatus.mitmDetected:
-            // we are unable to get the Approov token due to network conditions
-            response.decision = .ShouldRetry
-            response.error = ApproovError.networkingError(message: response.sdkMessage)
-            return response
-        case ApproovTokenFetchStatus.unprotectedURL,
-            ApproovTokenFetchStatus.unknownURL,
-            ApproovTokenFetchStatus.noApproovService:
-            // we proceed but do NOT add the Approov token header to the request headers
-            response.decision = .ShouldProceed
-        default:
-            // we have a more permanent error condition
-            response.decision = .ShouldFail
-            response.error = ApproovError.permanentError(message: response.sdkMessage)
-            return response
+        } else if approovResult.status != .noApproovService,
+                  approovResult.status != .unknownURL,
+                  approovResult.status != .unprotectedURL {
+            // We are proceeding (allowed by mutator) with a failure status.
+            // Add the status string to the Approov token header if
+            // useApproovStatusIfNoToken is set, so callers can observe it.
+            if useStatus {
+                hasChanges = true
+                setTokenHeaderKey = tokenHeader
+                setTokenHeaderValue = tokenPrefix + Approov.string(from: approovResult.status)
+            }
         }
 
         // we only continue additional processing if we had a valid status from Approov, to prevent additional delays
-        // by trying to fetch from Approov again and this also protects against header substitutions in domains not
-        // protected by Approov and therefore are potentially subject to a MitM.
         if (approovResult.status != .success) && (approovResult.status != .unprotectedURL) {
             return response
         }
