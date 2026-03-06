@@ -24,7 +24,7 @@ import os.log
  * message signatures to HTTP requests based on specified parameters and
  * algorithms.
  */
-public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
+public class ApproovDefaultMessageSigning: ApproovServiceMutator {
 
     /**
      * Constant for the SHA-256 digest algorithm (used for body digests).
@@ -109,7 +109,7 @@ public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
      * - Returns: The processed HTTP request with the signature headers added.
      * - Throws: An `ApproovError` if an error occurs during processing.
      */
-    public func processedRequest(_ request: URLRequest, changes: ApproovRequestMutations) throws -> URLRequest {
+    public func handleInterceptorProcessedRequest(_ request: URLRequest, changes: ApproovRequestMutations) throws -> URLRequest {
         // If the request doesn't have an Approov token, we don't need to sign it
         if (request.allHTTPHeaderFields?["Approov-Token"]) != nil {
             // Generate and add a message signature
@@ -132,7 +132,8 @@ public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
                 sigId = "install"
                 guard let base64Signature = ApproovService.getInstallMessageSignature(message: message),
                       let decodedSignature = Data(base64Encoded: base64Signature) else {
-                    throw ApproovError.permanentError(message: "Failed to generate ES256 signature")
+                    os_log("ApproovService: install message signature unavailable, skipping signing", type: .info)
+                    return request
                 }
                 // decode the signature from ASN.1 DER format
                 signature = try ApproovDefaultMessageSigning.decodeASN_1_DER_ES256_Signature(decodedSignature)

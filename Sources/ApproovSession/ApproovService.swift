@@ -85,9 +85,6 @@ public class ApproovService {
     // the dispatch queue to manage serial access to other ApproovService state
     private static let stateQueue = DispatchQueue(label: "ApproovService.state", qos: .userInitiated)
 
-    // if we should proceed on network fail
-    private static var proceedOnNetworkFail = false
-
     // binding header name
     private static var bindingHeader = ""
 
@@ -100,8 +97,8 @@ public class ApproovService {
     // Approov TraceID optional header
     private static var approovTraceIDHeader: String? = "Approov-TraceID"
 
-    // the target for request processing interceptorExtensions
-    private static var interceptorExtensions: ApproovInterceptorExtensions? = nil
+    // the target for request processing serviceMutator
+    private static var serviceMutator: ApproovServiceMutator = ApproovServiceMutatorDefault.shared
 
     // map of headers that should have their values substituted for secure strings, mapped to their
     // required prefixes
@@ -184,24 +181,6 @@ public class ApproovService {
     }
 
     /**
-     * Sets a flag indicating if the network interceptor should proceed anyway if it is
-     * not possible to obtain an Approov token due to a networking failure. If this is set
-     * then your backend API can receive calls without the expected Approov token header
-     * being added, or without header/query parameter substitutions being made. Note that
-     * this should be used with caution because it may allow a connection to be established
-     * before any dynamic pins have been received via Approov, thus potentially opening the
-     * channel to a MitM.
-     *
-     * @param proceed is true if Approov networking fails should allow continuation
-     */
-    public static func setProceedOnNetworkFailure(proceed: Bool) {
-        stateQueue.sync {
-            proceedOnNetworkFail = proceed
-            os_log("ApproovService: setProceedOnNetworkFailure ", type: .info, proceed)
-        }
-    }
-
-    /**
      * Sets a development key indicating that the app is a development version and it should
      * pass attestation even if the app is not registered or it is running on an emulator. The
      * development key value can be rotated at any point in the account if a version of the app
@@ -275,6 +254,22 @@ public class ApproovService {
     }
 
     /**
+     * Sets a mutator that can be used to customize the behavior of the ApproovService layer.
+     * Passing nil restores the default backward-compatible behavior.
+     *
+     * @param mutator the custom mutator to use, or nil to reset to defaults.
+     */
+    public static func setServiceMutator(_ mutator: ApproovServiceMutator?) {
+        stateQueue.sync {
+            if let m = mutator {
+                serviceMutator = m
+            } else {
+                serviceMutator = ApproovServiceMutatorDefault.shared
+            }
+        }
+    }
+
+    /**
      * Sets the interceptor extensions callback handler. This facility was introduced to support
      * message signing that is independent from the rest of the attestation flow. The default
      * ApproovService layer issues no callbacks, provide a non-null ApproovInterceptorExtensions
@@ -284,15 +279,9 @@ public class ApproovService {
      *              provided configuration must remain constant while in use by the ApproovService.
      *              Passing null to this method will disable message signing.
      */
+    @available(*, deprecated, message: "Use setServiceMutator instead.")
     public static func setApproovInterceptorExtensions(_ callbacks: ApproovInterceptorExtensions?) {
-        if callbacks == nil {
-            os_log("Interceptor extension disabled", type: .debug)
-        } else {
-            os_log("Interceptor extension enabled", type: .debug)
-        }
-        stateQueue.sync {
-            interceptorExtensions = callbacks
-        }
+        // Obsolete implementation left blank. Use ApproovServiceMutator system instead.
     }
 
     /**
@@ -441,21 +430,9 @@ public class ApproovService {
             os_log("ApproovService: precheck: %@", type: .debug, Approov.string(from: approovResults.status))
         }
 
-        // process the returned Approov status
-        if approovResults.status == ApproovTokenFetchStatus.rejected {
-            // if the request is rejected then we provide a special exception with additional information
-            throw ApproovError.rejectionError(message: "precheck: rejected", ARC: approovResults.arc,
-                                              rejectionReasons: approovResults.rejectionReasons)
-        } else if approovResults.status == ApproovTokenFetchStatus.noNetwork ||
-                  approovResults.status == ApproovTokenFetchStatus.poorNetwork ||
-                  approovResults.status == ApproovTokenFetchStatus.mitmDetected {
-            // we are unable to get the secure string due to network conditions so the request can
-            // be retried by the user later
-            throw ApproovError.networkingError(message: "precheck network error: " + Approov.string(from: approovResults.status))
-        } else if (approovResults.status != ApproovTokenFetchStatus.success) && (approovResults.status != ApproovTokenFetchStatus.unknownKey) {
-            // we are unable to get the secure string due to a more permanent error
-            throw ApproovError.permanentError(message: "precheck: " + Approov.string(from: approovResults.status))
-        }
+        // process the returned Approov status using the mutator
+        let mutator = stateQueue.sync { return serviceMutator }
+        try mutator.handlePrecheckResult(approovResults)
     }
 
     /**
@@ -505,20 +482,10 @@ public class ApproovService {
         let result: ApproovTokenFetchResult = Approov.fetchTokenAndWait(url)
         os_log("ApproovService: fetchToken: %@", type: .debug, Approov.string(from: result.status))
 
-        // process the status
-        switch result.status {
-        case .success:
-            // provide the Approov token result
-            return result.token
-        case .noNetwork,
-             .poorNetwork,
-             .mitmDetected:
-            // we are unable to get an Approov token due to network conditions
-            throw ApproovError.networkingError(message: "fetchToken network error: " + Approov.string(from: result.status))
-        default:
-            // we have failed to get an Approov token due to a more permanent error
-            throw ApproovError.permanentError(message: "fetchToken: " + Approov.string(from: result.status))
-        }
+        // process the status using the mutator
+        let mutator = stateQueue.sync { return serviceMutator }
+        try mutator.handleFetchTokenResult(result)
+        return result.token
     }
 
     /**
@@ -586,21 +553,9 @@ public class ApproovService {
         let approovResult = Approov.fetchSecureStringAndWait(key, newDef)
         os_log("ApproovService: fetchSecureString: %@: %@", type: .info, type, Approov.string(from: approovResult.status))
 
-        // process the returned Approov status
-        if approovResult.status == ApproovTokenFetchStatus.rejected {
-            // if the request is rejected then we provide a special exception with additional information
-            throw ApproovError.rejectionError(message: "fetchSecureString: rejected", ARC: approovResult.arc,
-                                              rejectionReasons: approovResult.rejectionReasons)
-        } else if approovResult.status == ApproovTokenFetchStatus.noNetwork ||
-                  approovResult.status == ApproovTokenFetchStatus.poorNetwork ||
-                  approovResult.status == ApproovTokenFetchStatus.mitmDetected {
-            // we are unable to get the secure string due to network conditions so the request can
-            // be retried by the user later
-            throw ApproovError.networkingError(message: "fetchSecureString network error: " + Approov.string(from: approovResult.status))
-        } else if ((approovResult.status != ApproovTokenFetchStatus.success) && (approovResult.status != ApproovTokenFetchStatus.unknownKey)) {
-            // we are unable to get the secure string due to a more permanent error
-            throw ApproovError.permanentError(message: "fetchSecureString: " + Approov.string(from: approovResult.status))
-        }
+        // process the returned Approov status using the mutator
+        let mutator = stateQueue.sync { return serviceMutator }
+        try mutator.handleFetchSecureStringResult(approovResult, operation: type, key: key)
         return approovResult.secureString
     }
 
@@ -622,21 +577,9 @@ public class ApproovService {
         let approovResult = Approov.fetchCustomJWTAndWait(payload)
         os_log("ApproovService: fetchCustomJWT: %@", type: .info, Approov.string(from: approovResult.status))
 
-        // process the returned Approov status
-        if approovResult.status == ApproovTokenFetchStatus.rejected {
-            // if the request is rejected then we provide a special exception with additional information
-            throw ApproovError.rejectionError(message: "fetchCustomJWT: rejected", ARC: approovResult.arc,
-                                              rejectionReasons: approovResult.rejectionReasons)
-        } else if approovResult.status == ApproovTokenFetchStatus.noNetwork ||
-                  approovResult.status == ApproovTokenFetchStatus.poorNetwork ||
-                  approovResult.status == ApproovTokenFetchStatus.mitmDetected {
-            // we are unable to get the custom JWT due to network conditions so the request can
-            // be retried by the user later
-            throw ApproovError.networkingError(message: "fetchCustomJWT network error: " + Approov.string(from: approovResult.status))
-        } else if (approovResult.status != ApproovTokenFetchStatus.success) {
-            // we are unable to get the custom JWT due to a more permanent error
-            throw ApproovError.permanentError(message: "fetchCustomJWT: " + Approov.string(from: approovResult.status))
-        }
+        // process the returned Approov status using the mutator
+        let mutator = stateQueue.sync { return serviceMutator }
+        try mutator.handleFetchCustomJWTResult(approovResult)
         return approovResult.token
     }
 
@@ -688,9 +631,19 @@ public class ApproovService {
      * @param request is the original request to be made
      * @return ApproovUpdateResponse providing an updated requests, plus an errors and status
      */
-    static func updateRequestWithApproov(request: URLRequest) -> ApproovUpdateResponse {
-        // check if the SDK is not initialized or if the URL matches one of the exclusion regexs and just return if it does
-        var changes = ApproovRequestMutations()
+        // fetch the mutator that modifies decision-making behavior
+        let mutator = stateQueue.sync { return serviceMutator }
+
+        // check if the mutator wants to process this request
+        do {
+            if try !mutator.handleInterceptorShouldProcessRequest(request) {
+                return ApproovUpdateResponse(request: request, decision: .ShouldProceed, sdkMessage: "", error: nil)
+            }
+        } catch {
+            let nsError = error as NSError
+            return ApproovUpdateResponse(request: request, decision: .ShouldFail, sdkMessage: "", error: ApproovError.permanentError(message: nsError.localizedDescription))
+        }
+
         if let url = request.url {
             if !isInitialized {
                 os_log("ApproovService: not initialized, forwarding: %@", type: .info, url.absoluteString)
@@ -731,7 +684,37 @@ public class ApproovService {
             os_log("ApproovService: dynamic configuration update received")
         }
 
-        // handle the Approov token fetch response
+        // handle the Approov token fetch response with the mutator
+        do {
+            if try !mutator.handleInterceptorFetchTokenResult(approovResult, url: request.url!.absoluteString) {
+                // Determine whether mutator aborted due to rejection, networking issue or config error by running the default logic
+                // we construct a response to return
+                var response = ApproovUpdateResponse(request: request, decision: .ShouldFail, sdkMessage: Approov.string(from: approovResult.status), error: nil)
+                switch approovResult.status {
+                case .noNetwork, .poorNetwork, .mitmDetected:
+                    response.decision = .ShouldRetry
+                    response.error = ApproovError.networkingError(message: response.sdkMessage)
+                case .noApproovService, .unknownURL, .unprotectedURL:
+                    response.decision = .ShouldProceed
+                default:
+                    response.error = ApproovError.permanentError(message: response.sdkMessage)
+                }
+                return response
+            }
+        } catch let mutatorError as ApproovError {
+            // Handle specific errors thrown by the mutator (e.g. throwing rejection error or networking error early)
+            switch mutatorError {
+            case .rejectionError:
+                return ApproovUpdateResponse(request: request, decision: .ShouldFail, sdkMessage: Approov.string(from: approovResult.status), error: mutatorError)
+            case .networkingError:
+                return ApproovUpdateResponse(request: request, decision: .ShouldRetry, sdkMessage: Approov.string(from: approovResult.status), error: mutatorError)
+            default:
+                return ApproovUpdateResponse(request: request, decision: .ShouldFail, sdkMessage: Approov.string(from: approovResult.status), error: mutatorError)
+            }
+        } catch {
+            return ApproovUpdateResponse(request: request, decision: .ShouldFail, sdkMessage: Approov.string(from: approovResult.status), error: ApproovError.permanentError(message: error.localizedDescription))
+        }
+
         response.sdkMessage = Approov.string(from: approovResult.status)
         var hasChanges = false
         var setTokenHeaderKey: String?
@@ -765,14 +748,9 @@ public class ApproovService {
             ApproovTokenFetchStatus.poorNetwork,
             ApproovTokenFetchStatus.mitmDetected:
             // we are unable to get the Approov token due to network conditions
-            if !proceedOnNetworkFail {
-                // unless required to proceed; the request can be retried by the user later
-                response.decision = .ShouldRetry
-                response.error = ApproovError.networkingError(message: response.sdkMessage)
-                return response
-            }
-            // otherwise, proceed with the request but without the Approov token header
-            response.decision = .ShouldProceed
+            response.decision = .ShouldRetry
+            response.error = ApproovError.networkingError(message: response.sdkMessage)
+            return response
         case ApproovTokenFetchStatus.unprotectedURL,
             ApproovTokenFetchStatus.unknownURL,
             ApproovTokenFetchStatus.noApproovService:
@@ -799,49 +777,45 @@ public class ApproovService {
             let subsHeadersCopy = stateQueue.sync {
                 return substitutionHeaders
             }
-            for (header, prefix) in subsHeadersCopy {
-                if let value = requestHeaders[header] {
-                    // check if the request contains the header we want to replace
-                    if ((value.hasPrefix(prefix)) && (value.count > prefix.count)) {
-                        // fetch any secure string keyed from the current value, without any prefix
-                        let index = prefix.index(prefix.startIndex, offsetBy: prefix.count)
-                        let approovResults = Approov.fetchSecureStringAndWait(String(value.suffix(from:index)), nil)
-                        os_log("ApproovService: Substituting header: %@, %@", type: .info, header, Approov.string(from: approovResults.status))
 
-                        // process the result of the token fetch operation
+            // apply any header substitutions using the mutator policy
+            for (header, prefix) in subsHeadersCopy {
+                if let headerValue = requestHeaders[header] {
+                    // we check if mutator allows processing substitution
+                    var fetchString = false
+                    do {
+                        let tempResult = Approov.fetchSecureStringAndWait(String(headerValue), nil)
+                        if try mutator.handleInterceptorHeaderSubstitutionResult(tempResult, header: header) {
+                            fetchString = true
+                        }
+                    } catch let mutatorError as ApproovError {
+                        switch mutatorError {
+                        case .networkingError:
+                            response.decision = .ShouldRetry
+                            response.error = mutatorError
+                        default:
+                            response.decision = .ShouldFail
+                            response.error = mutatorError
+                        }
+                        return response
+                    } catch {
+                        response.decision = .ShouldFail
+                        response.error = ApproovError.permanentError(message: error.localizedDescription)
+                        return response
+                    }
+                    if fetchString {
+                        let index = prefix.index(prefix.startIndex, offsetBy: prefix.count)
+                        let approovResults = Approov.fetchSecureStringAndWait(String(headerValue.suffix(from:index)), nil)
+                        os_log("ApproovService: Substituting header: %@, %@", type: .info, header, Approov.string(from: approovResults.status))
                         if approovResults.status == ApproovTokenFetchStatus.success {
-                            // we add the modified header to the new copy of request
                             if let secureStringResult = approovResults.secureString {
                                 hasChanges = true;
                                 setSubstitutionHeaders[header] = prefix + secureStringResult
                             } else {
-                                // secure string is nil
                                 response.decision = .ShouldFail
                                 response.error = ApproovError.permanentError(message: "Header substitution: key lookup error")
                                 return response
                             }
-                        } else if approovResults.status == ApproovTokenFetchStatus.rejected {
-                            // if the request is rejected then we provide a special exception with additional information
-                            response.decision = .ShouldFail
-                            response.error = ApproovError.rejectionError(message: "Header substitution: rejected",
-                                                                         ARC: approovResults.arc,
-                                                                         rejectionReasons: approovResults.rejectionReasons)
-                            return response
-                        } else if approovResults.status == ApproovTokenFetchStatus.noNetwork ||
-                                  approovResults.status == ApproovTokenFetchStatus.poorNetwork ||
-                                  approovResults.status == ApproovTokenFetchStatus.mitmDetected {
-                            // we are unable to get the secure string due to network conditions so the request can
-                            // be retried by the user later
-                            if !proceedOnNetworkFail {
-                                response.decision = .ShouldRetry
-                                response.error = ApproovError.networkingError(message: "Header substitution: network issue, retry needed")
-                                return response
-                            }
-                        } else if approovResults.status != ApproovTokenFetchStatus.unknownKey {
-                            // we have failed to get a secure string with a more serious permanent error
-                            response.decision = .ShouldFail
-                            response.error = ApproovError.permanentError(message: "Header substitution: " + Approov.string(from: approovResults.status))
-                            return response
                         }
                     }
                 }
@@ -874,9 +848,27 @@ public class ApproovService {
                             os_log("ApproovService: Substituting query parameter: %@, %@", entry,
                                 Approov.string(from: approovResults.status))
 
+                            var allowSub = false
+                            do {
+                                allowSub = try mutator.handleInterceptorQueryParamSubstitutionResult(approovResults, queryKey: entry)
+                            } catch let mutatorError as ApproovError {
+                                switch mutatorError {
+                                case .networkingError:
+                                    response.decision = .ShouldRetry
+                                    response.error = mutatorError
+                                default:
+                                    response.decision = .ShouldFail
+                                    response.error = mutatorError
+                                }
+                                return response
+                            } catch {
+                                response.decision = .ShouldFail
+                                response.error = ApproovError.permanentError(message: error.localizedDescription)
+                                return response
+                            }
+
                             // process the result of the secure string fetch operation
-                            switch approovResults.status {
-                            case .success:
+                            if allowSub && approovResults.status == .success {
                                 // perform a query substitution
                                 if let secureStringResult = approovResults.secureString {
                                     hasChanges = true
@@ -890,37 +882,6 @@ public class ApproovService {
                                         return response
                                     }
                                 }
-                            case .rejected:
-                                // if the request is rejected then we provide a special exception with additional information
-                                response.decision = .ShouldFail
-                                response.error = ApproovError.rejectionError(
-                                    message: "Query parameter substitution for \(entry) rejected",
-                                    ARC: approovResults.arc,
-                                    rejectionReasons: approovResults.rejectionReasons
-                                )
-                                return response
-                            case .noNetwork,
-                                    .poorNetwork,
-                                    .mitmDetected:
-                                // we are unable to get the secure string due to network conditions so the request can
-                                // be retried by the user later
-                                if !proceedOnNetworkFail {
-                                    response.decision = .ShouldRetry
-                                    response.error = ApproovError.networkingError(message: "Query parameter substitution for " +
-                                        "\(entry): network issue, retry needed")
-                                    return response
-                                }
-                            case .unknownKey:
-                                // do not modify the URL
-                                break
-                            default:
-                                // we have failed to get a secure string with a more permanent error
-                                response.decision = .ShouldFail
-                                response.error = ApproovError.permanentError(
-                                    message: "Query parameter substitution for \(entry): " +
-                                    Approov.string(from: approovResults.status)
-                                )
-                                return response
                             }
                         }
                     }
