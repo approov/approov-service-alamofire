@@ -190,6 +190,23 @@ ApproovService.setUseApproovStatusIfNoToken(shouldUse: true)
 
 When enabled, if the Approov token fetch fails or returns an empty token, the `Approov-Token` header will be populated with the status string (with the configured prefix) instead of being left empty.
 
+## Logging
+
+You can customize the log level emitted by the `ApproovService` using the `ApproovLogLevel` enum. This controls the verbosity of unified logging (`os_log`) output generated internally by the package.
+
+The available log levels are:
+*   `.off`: Disables all logging from the `ApproovService` package.
+*   `.error`: Only logs critical errors (e.g., initialization failures, missing pins).
+*   `.warning`: Logs warnings and errors (e.g., duplicated initializations with identical configurations).
+*   `.info` (Default): Logs informative events, configuration receipts, and the token states being set.
+*   `.debug`: Logs highly verbose tracing information for every request, initialization step, and token fetch. Use only for in-depth debugging.
+
+To configure the log level:
+
+```swift
+ApproovService.setLoggingLevel(.debug)
+```
+
 ## Real-world examples
 
 ### Policy-driven mutator (host scoping, offline fallback, message signing, pinning)

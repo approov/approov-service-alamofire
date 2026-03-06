@@ -11,6 +11,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Separated `CHANGELOG.md` from the primary README for better discoverability.
 - Introduced `ApproovServiceMutator` interface to allow customizing the behavior of the `ApproovService` during attestation and interception flows without forking the project.
 - Added `setUseApproovStatusIfNoToken` configuration to `ApproovService`. When enabled, failure reasons (like `mitm_detected` or `no_network`) are placed in the Approov-Token header if a request proceeds without a valid token.
+- Added `setLoggingLevel(_ level: ApproovLogLevel)` configuration for fine-grained control over the package's internal `os_log` statements. Supports `.off`, `.error`, `.warning`, `.info`, and `.debug`.
 ### Changed
 - `ApproovDefaultMessageSigning` now gracefully skips signing and proceeds with the request without throwing an error if the install message signature is unavailable.
 - `ApproovDefaultMessageSigning` now implements `ApproovServiceMutator` instead of `ApproovInterceptorExtensions`.
