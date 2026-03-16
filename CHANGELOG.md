@@ -15,6 +15,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Changed
 - `ApproovDefaultMessageSigning` now gracefully skips signing and proceeds with the request without throwing an error if the install message signature is unavailable.
 - `ApproovDefaultMessageSigning` now implements `ApproovServiceMutator` instead of `ApproovInterceptorExtensions`.
+- `ApproovDefaultMessageSigning` now checks for the configured Approov token header via an internal synchronized accessor instead of assuming `Approov-Token`.
 ### Deprecated
 - `ApproovInterceptorExtensions` was replaced by the much more robust `ApproovServiceMutator` protocol. `setApproovInterceptorExtensions` now does nothing and emits a deprecation warning.
 ### Removed

@@ -236,6 +236,17 @@ public class ApproovService {
     }
 
     /**
+     * Gets the header that is used to add the Approov token.
+     *
+     * @return the name of the header used for the Approov token
+     */
+    static func getApproovTokenHeader() -> String {
+        return stateQueue.sync {
+            return approovTokenHeader
+        }
+    }
+
+    /**
      * Sets the header name used to provide the optional Approov TraceID debug value. Passing
      * nil disables the TraceID header.
      *
