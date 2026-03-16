@@ -9,7 +9,8 @@ Pod::Spec.new do |s|
   s.license      = { :type => "Commercial", :file => "LICENSE" }
   s.authors      = { "Approov, Ltd." => "support@approov.io" }
   s.source       = { :git => "https://github.com/approov/approov-service-alamofire", :tag => s.version }
-  
+  s.module_name = 'ApproovAFSession'
+
   # Supported platforms
   s.ios.deployment_target = '11.0'
   s.watchos.deployment_target = '9.0'
