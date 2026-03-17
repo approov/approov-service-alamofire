@@ -25,6 +25,18 @@ By default, the `ApproovService` processes requests based on the attestation sta
 | **Rejection** | Throw Exception | An `ApproovError.rejectionError` is thrown. The request is marked as `.ShouldFail`. |
 | **No Approov Service / Unknown URL** | Proceed | The request is sent **without** an `Approov-Token`. |
 
+## Multiple Service Layers
+
+It is possible to use more than one Approov service layer in the same app, for example the URLSession and Alamofire packages together. The underlying Approov SDK can only be initialized once, so if another service layer later calls `ApproovService.initialize(...)` with the same configuration, the duplicate SDK initialization is detected and ignored.
+
+In that case you may see a log entry similar to:
+
+```text
+ApproovService: Ignoring initialization error in Approov SDK: The operation couldn’t be completed. (Foundation._GenericObjCError error 0.)
+```
+
+This log is informational only. Execution continues and this condition is not surfaced as an exception. If a later initialization attempts to use a different configuration, that is still treated as a real configuration error.
+
 ## Customizing Request Handling with Mutators
 
 You may want to modify this behavior to suit specific app requirements. A common use case is handling `NO_APPROOV_SERVICE` statuses.
