@@ -664,3 +664,6 @@ class ApproovURLSessionComponentProvider: ComponentProvider {
         return request.httpBody != nil || request.httpBodyStream != nil
     }
 }
+
+@available(*, deprecated, message: "Use ApproovServiceMutator instead.")
+extension ApproovDefaultMessageSigning: ApproovInterceptorExtensions {}

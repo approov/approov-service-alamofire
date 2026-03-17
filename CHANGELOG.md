@@ -17,6 +17,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - `ApproovDefaultMessageSigning` now implements `ApproovServiceMutator` instead of `ApproovInterceptorExtensions`.
 - `ApproovDefaultMessageSigning` now checks for the configured Approov token header via an internal synchronized accessor instead of assuming `Approov-Token`.
 ### Deprecated
-- `ApproovInterceptorExtensions` was replaced by the much more robust `ApproovServiceMutator` protocol. `setApproovInterceptorExtensions` now does nothing and emits a deprecation warning.
+- `ApproovInterceptorExtensions` was replaced by the much more robust `ApproovServiceMutator` protocol. The deprecated `setApproovInterceptorExtensions` API now forwards to `setServiceMutator` for backward compatibility.
 ### Removed
 - `setProceedOnNetworkFailure()` has been removed. Use the `ApproovServiceMutator` instead to customize behavior on network failures. See `USAGE.md` for examples of how to implement a custom mutator.

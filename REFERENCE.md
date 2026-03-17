@@ -114,7 +114,7 @@ ApproovService.setServiceMutator(nil)
 ```
 
 ## setApproovInterceptorExtensions (deprecated)
-Backwards-compatible API for message signing; use `setServiceMutator` instead.
+Backwards-compatible API for message signing; use `setServiceMutator` instead. This deprecated API forwards to `setServiceMutator` for backward compatibility.
 
 ```swift
 ApproovService.setApproovInterceptorExtensions(myExtensions)
@@ -296,5 +296,5 @@ let arc = ApproovService.getLastARC()
 Updates a `URLRequest` with Approov protection (token, substitutions, etc.). Returns an `ApproovUpdateResponse` describing the decision and any error. Used internally by the `ApproovSession` and Alamofire interceptors to protect the networking traffic inline.
 
 ```swift
-let response = ApproovService.updateRequestWithApproov(request: request, sessionConfig: session.configuration)
+let response = ApproovService.updateRequestWithApproov(request)
 ```

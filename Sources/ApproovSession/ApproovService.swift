@@ -68,6 +68,18 @@ public struct ApproovUpdateResponse {
     var error: Error?
 }
 
+// Log level for controlling the verbosity of os_log output from the ApproovService
+public enum ApproovLogLevel: Int, Comparable {
+    case off = 0
+    case error = 1
+    case warning = 2
+    case info = 3
+    case debug = 4
+    public static func < (lhs: ApproovLogLevel, rhs: ApproovLogLevel) -> Bool {
+        return lhs.rawValue < rhs.rawValue
+    }
+}
+
 // ApproovService provides a mediation layer to the Approov SDK itself
 public class ApproovService {
     // private initializer
@@ -291,18 +303,35 @@ public class ApproovService {
     }
 
     /**
-     * Sets a mutator that can be used to customize the behavior of the ApproovService layer.
-     * Passing nil restores the default backward-compatible behavior.
+     * Sets the ApproovServiceMutator instance to handle callbacks from the
+     * ApproovService implementation. This facility enables customization of
+     * ApproovService operations at key points in the configuration and
+     * attestation flows. It should reduce the number of times this service
+     * layer implementation needs to be forked in order to introduce custom
+     * behavior.
      *
-     * @param mutator the custom mutator to use, or nil to reset to defaults.
+     * @param mutator is the ApproovServiceMutator with callback handlers that may
+     *              override the default behavior of the ApproovService singleton.
+     *              Passing nil to this method will reinstate the default behavior.
      */
     public static func setServiceMutator(_ mutator: ApproovServiceMutator?) {
+        let appliedMutator = mutator ?? ApproovServiceMutatorDefault.shared
+        if loggingLevel >= .debug {
+            os_log("Applied ApproovServiceMutator: %@", type: .debug, String(describing: appliedMutator))
+        }
         stateQueue.sync {
-            if let m = mutator {
-                serviceMutator = m
-            } else {
-                serviceMutator = ApproovServiceMutatorDefault.shared
-            }
+            serviceMutator = appliedMutator
+        }
+    }
+
+    /**
+     * Gets the active service mutator instance that is handling callbacks from ApproovService.
+     *
+     * @return the service mutator instance (never nil)
+     */
+    public static func getServiceMutator() -> ApproovServiceMutator {
+        return stateQueue.sync {
+            return serviceMutator
         }
     }
 
@@ -312,13 +341,13 @@ public class ApproovService {
      * distinguish between different failure reasons (e.g., NO_NETWORK, MITM_DETECTED) even when
      * the Approov-Token would otherwise be empty or missing.
      *
-     * @param useStatus the use status boolean
+     * @param shouldUse the use status boolean
      */
-    public static func setUseApproovStatusIfNoToken(_ useStatus: Bool) {
+    public static func setUseApproovStatusIfNoToken(shouldUse: Bool) {
         stateQueue.sync {
-            useApproovStatusIfNoToken = useStatus
+            useApproovStatusIfNoToken = shouldUse
             if loggingLevel >= .info {
-                os_log("ApproovService: setUseApproovStatusIfNoToken %@", type: .info, useStatus ? "YES" : "NO")
+                os_log("ApproovService: setUseApproovStatusIfNoToken %@", type: .info, shouldUse ? "YES" : "NO")
             }
         }
     }
@@ -341,18 +370,22 @@ public class ApproovService {
     }
 
     /**
-     * Sets the interceptor extensions callback handler. This facility was introduced to support
-     * message signing that is independent from the rest of the attestation flow. The default
-     * ApproovService layer issues no callbacks, provide a non-null ApproovInterceptorExtensions
-     * handler to add functionality to the attestation flow.
-     *
-     * @param callbacks is the configuration used to control message signing. The behaviour of the
-     *              provided configuration must remain constant while in use by the ApproovService.
-     *              Passing null to this method will disable message signing.
+     * @deprecated Use setServiceMutator instead.
      */
     @available(*, deprecated, message: "Use setServiceMutator instead.")
     public static func setApproovInterceptorExtensions(_ callbacks: ApproovInterceptorExtensions?) {
-        // Obsolete implementation left blank. Use ApproovServiceMutator system instead.
+        setServiceMutator(callbacks)
+    }
+
+    /**
+     * Gets the interceptor extensions callback handlers.
+     *
+     * @return the interceptor extensions callback handlers or nil if none set
+     * @deprecated Use getServiceMutator instead.
+     */
+    @available(*, deprecated, message: "Use getServiceMutator instead.")
+    public static func getApproovInterceptorExtensions() -> ApproovInterceptorExtensions? {
+        return getServiceMutator() as? ApproovInterceptorExtensions
     }
 
     /**
@@ -473,6 +506,17 @@ public class ApproovService {
                     os_log("ApproovService: removeExclusionURLRegex: %@", type: .debug, urlRegex)
                 }
             }
+        }
+    }
+
+    /**
+     * Gets a copy of the current exclusion URL regexs.
+     *
+     * @return Dictionary of the exclusion regexs to their respective patterns.
+     */
+    public static func getExclusionURLRegexs() -> Dictionary<String, NSRegularExpression> {
+        return stateQueue.sync {
+            return exclusionURLRegexs
         }
     }
 
@@ -1038,14 +1082,13 @@ public class ApproovService {
         }
 
         // call the processed request callback
-        if let interceptorExtensions = ApproovService.interceptorExtensions {
-            do {
-                response.request = try interceptorExtensions.processedRequest(response.request, changes: changes)
-            } catch let error {
-                response.decision = .ShouldFail
-                response.error = ApproovError.permanentError(
-                    message: "Interceptor extension for processed request error: \(error.localizedDescription)")
-            }
+        do {
+            response.request = try mutator.handleInterceptorProcessedRequest(response.request, changes: changes)
+        } catch let error {
+            response.decision = .ShouldFail
+            response.error = ApproovError.permanentError(
+                message: "Interceptor processed request error: \(error.localizedDescription)")
+            return response
         }
 
         return response
