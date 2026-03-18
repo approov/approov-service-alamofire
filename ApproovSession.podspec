@@ -19,6 +19,8 @@ Pod::Spec.new do |s|
   s.source_files = "Sources/ApproovSession/**/*.{swift,h}"
   # Dependency on the Approov SDK
   s.dependency 'approov-ios-sdk', '~> 3.5.3'
+  # Add dependency on swift-http-structured-headers
+  s.dependency 'swift-http-structured-headers', '~> 1.4.0'
   s.frameworks = 'Approov'
   # Pod target xcconfig settings if required
   s.pod_target_xcconfig = {
