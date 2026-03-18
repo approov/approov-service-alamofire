@@ -153,7 +153,9 @@ ApproovService.setServiceMutator(signer)
 If you have already customized the mutator, you can add message signing to it like so:
 
 ```swift
-ApproovService.setServiceMutator(MyMutator(signer: ApproovDefaultMessageSigning()))
+let signer = ApproovDefaultMessageSigning()
+    .setDefaultFactory(ApproovDefaultMessageSigning.generateDefaultSignatureParametersFactory())
+ApproovService.setServiceMutator(MyMutator(signer: signer))
 ```
 
 ### Customize behavior

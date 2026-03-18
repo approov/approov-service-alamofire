@@ -105,6 +105,20 @@ otherwise be empty or missing.
 ApproovService.setUseApproovStatusIfNoToken(shouldUse: true)
 ```
 
+## setLoggingLevel
+Sets the service-layer logging level. This controls the verbosity of unified logging (`os_log`) output generated internally by the package. All log statements are gated by this level.
+
+Available levels (in order of increasing verbosity):
+- `.off`: Disables all logging from the `ApproovService` package.
+- `.error`: Only logs critical errors (e.g., initialization failures, missing pins).
+- `.warning`: Logs warnings and errors (e.g., duplicated initializations with identical configurations).
+- `.info` (Default): Logs informative events, configuration receipts, and the token states being set.
+- `.debug`: Logs highly verbose tracing information for every request, initialization step, and token fetch.
+
+```swift
+ApproovService.setLoggingLevel(.debug)
+```
+
 ## setServiceMutator
 Installs a service mutator to customize behavior at key points in the service flow. Pass `nil` to restore defaults. See the `USAGE.md` for more information and a custom mutator example implementation.
 
