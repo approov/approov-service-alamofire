@@ -115,9 +115,17 @@ public class ApproovService {
     // whether to place ApproovTokenFetchStatus inside the Token header when an error occurs or a token is empty
     private static var useApproovStatusIfNoToken = false
 
+    // dedicated queue for thread-safe access to the logging level (separate from stateQueue to
+    // avoid nested sync deadlocks when logging is checked inside stateQueue-protected methods)
+    private static let loggingQueue = DispatchQueue(label: "ApproovService.logging", qos: .userInitiated)
+    private static var _loggingLevel: ApproovLogLevel = .info
+
     // whether to log to the unified logging system
     // internal access so ApproovDefaultMessageSigning can read the level
-    static var loggingLevel: ApproovLogLevel = .info
+    static var loggingLevel: ApproovLogLevel {
+        get { loggingQueue.sync { _loggingLevel } }
+        set { loggingQueue.sync { _loggingLevel = newValue } }
+    }
 
     // map of headers that should have their values substituted for secure strings, mapped to their
     // required prefixes
@@ -361,11 +369,9 @@ public class ApproovService {
      * @param level the desired severity level
      */
     public static func setLoggingLevel(_ level: ApproovLogLevel) {
-        stateQueue.sync {
-            loggingLevel = level
-            if level >= .info {
-                os_log("ApproovService: logging level set to %d", type: .info, level.rawValue)
-            }
+        loggingLevel = level
+        if level >= .info {
+            os_log("ApproovService: logging level set to %d", type: .info, level.rawValue)
         }
     }
 
@@ -941,12 +947,14 @@ public class ApproovService {
 
             // apply any header substitutions using the mutator policy
             for (header, prefix) in subsHeadersCopy {
-                if let headerValue = requestHeaders[header] {
+                if let headerValue = requestHeaders[header], headerValue.hasPrefix(prefix) {
+                    let key = String(headerValue.dropFirst(prefix.count))
+                    let approovResults = Approov.fetchSecureStringAndWait(key, nil)
+
                     // we check if mutator allows processing substitution
                     var fetchString = false
                     do {
-                        let tempResult = Approov.fetchSecureStringAndWait(String(headerValue), nil)
-                        if try mutator.handleInterceptorHeaderSubstitutionResult(tempResult, header: header) {
+                        if try mutator.handleInterceptorHeaderSubstitutionResult(approovResults, header: header) {
                             fetchString = true
                         }
                     } catch let mutatorError as ApproovError {
@@ -964,9 +972,8 @@ public class ApproovService {
                         response.error = ApproovError.permanentError(message: error.localizedDescription)
                         return response
                     }
+
                     if fetchString {
-                        let index = prefix.index(prefix.startIndex, offsetBy: prefix.count)
-                        let approovResults = Approov.fetchSecureStringAndWait(String(headerValue.suffix(from:index)), nil)
                         if loggingLevel >= .info {
                             os_log("ApproovService: Substituting header: %@, %@", type: .info, header, Approov.string(from: approovResults.status))
                         }

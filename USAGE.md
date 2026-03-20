@@ -71,13 +71,23 @@ final class EnforceTokenMutator: ApproovServiceMutator {
 
 ### Allow Access Without Token (Optional)
 
-Conversely, if the device could not obtain proof of attestation, for example because of a `.poorNetwork` or `.noNetwork` response from the SDK, the default behavior is to cancel the request to your API. However, you might prefer to let the request attempt the connection to your backend without the Approov Token to allow for server-side handling (e.g., returning a custom 401/403).
+Conversely, if the device could not obtain proof of attestation, for example because of a `.mitmDetected` response from the SDK, the default behavior is to cancel the request to your API. However, you might prefer to let the request attempt the connection to your backend without the Approov Token to allow for server-side handling (e.g., returning a custom 401/403) or specialized honeypot routing.
 
-To implement this, check for `.poorNetwork` and return `true`, which proceeds without the token.
+To implement this, check for `.mitmDetected` and return `true`, which proceeds without the token instead of throwing an error.
 
 ```swift
-    if approovResults.status == .noApproovService {
-        return true // Proceed without token
+import ApproovAFSession
+import Approov
+
+final class AllowOfflineMutator: ApproovServiceMutator {
+    func handleInterceptorFetchTokenResult(_ approovResults: ApproovTokenFetchResult, url: String) throws -> Bool {
+        // If MITM is detected, we still proceed without a token to let the backend handle it
+        if approovResults.status == .mitmDetected {
+            return true
+        }
+
+        // For all other statuses, use the default behavior
+        return try ApproovServiceMutatorDefault.shared.handleInterceptorFetchTokenResult(approovResults, url: url)
     }
 }
 ```

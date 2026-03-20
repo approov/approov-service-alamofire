@@ -154,7 +154,9 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
         // get the dynamic pins from Approov
         guard let approovPins = Approov.getPins("public-key-sha256") else {
             // just return if there are no Approov pins (this can happen if Approov is not initialized)
-            os_log("ApproovService: pin verification no Approov pins")
+            if ApproovService.loggingLevel >= .info {
+                os_log("ApproovService: pin verification no Approov pins")
+            }
             return
         }
         
@@ -167,7 +169,9 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
                     // there are no pins set for the host so use managed trust roots if available
                     if approovPins["*"] == nil {
                         // there are no managed trust roots so the host is truly unpinned
-                        os_log("ApproovService: pin verification %@ no pins", host)
+                        if ApproovService.loggingLevel >= .info {
+                            os_log("ApproovService: pin verification %@ no pins", host)
+                        }
                         return true
                     } else {
                         // use the managed trust roots for pinning
@@ -183,24 +187,32 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
                         let publicKeyHashBase64 = String(data:publicKeyHash.base64EncodedData(), encoding: .utf8)
                         for pin in pinsForHost {
                             if publicKeyHashBase64 == pin {
-                                os_log("ApproovService: matched pin %@ for %@ from %d pins", pin, host, pinsForHost.count)
+                                if ApproovService.loggingLevel >= .debug {
+                                    os_log("ApproovService: matched pin %@ for %@ from %d pins", pin, host, pinsForHost.count)
+                                }
                                 return true
                             }
                         }
                     } catch let error {
                         // if there is an exception (typically because the certificate type isn't supported to get the SPKI header) then
                         // we simply log this on the basis that it might not being pinned to anyway
-                        os_log("ApproovService: skipping pinning for certificate: %@", error.localizedDescription)
+                        if ApproovService.loggingLevel >= .info {
+                            os_log("ApproovService: skipping pinning for certificate: %@", error.localizedDescription)
+                        }
                     }
                 }
                 
                 // we didn't find any matching pins
-                os_log("ApproovService: pin verification failed for %@ with no match for %d pins", host, pinsForHost.count)
+                if ApproovService.loggingLevel >= .error {
+                    os_log("ApproovService: pin verification failed for %@ with no match for %d pins", host, pinsForHost.count)
+                }
                 return false
             }
             else {
                 // host is not included in the Approov pins and therefore not pinned
-                os_log("ApproovService: pin verification %@ unpinned", host)
+                if ApproovService.loggingLevel >= .info {
+                    os_log("ApproovService: pin verification %@ unpinned", host)
+                }
                 return true
             }
         }()

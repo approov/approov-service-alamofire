@@ -10,15 +10,15 @@ Most methods either throw an `ApproovError` or return an `ApproovUpdateResponse`
 
 - `networkingError`: A temporary networking issue; offer a retry.
 - `rejectionError`: Attestation rejected; includes ARC and rejection reasons if enabled.
-- `permanentError` / `configurationError` / `initializationFailure`: Non-retryable in normal flows.
+- `permanentError` / `configurationError` / `initializationError`: Non-retryable in normal flows.
 
 ## initialize
 Initializes the SDK with the config obtained using `approov sdk -getConfigString` or
 in the original onboarding email. Note the initializer function should only ever be called once.
 Subsequent calls will be ignored since the ApproovSDK can only be initialized once; if however,
 an attempt is made to initialize with a different configuration (config) we throw an
-ApproovException.configurationError. If the Approov SDK fails to be initialized for some other
-reason, an `ApproovError.initializationFailure` is raised.
+ApproovError.configurationError. If the Approov SDK fails to be initialized for some other
+reason, an `ApproovError.initializationError` is raised.
 
 ```swift
 try ApproovService.initialize(config: "<config-string>")
@@ -30,21 +30,6 @@ Optional comment can be provided to configure the platform SDK:
 try ApproovService.initialize(config: "<config-string>", comment: "my-comment")
 ```
 
-## setProceedOnNetworkFailure
-*OBSOLETE* Use `setServiceMutator` instead to customize the behavior of the service.
-Controls whether network calls should proceed when Approov cannot fetch due to network errors. Use with *CAUTION* because it may allow requests before pins are updated.
-
-```swift
-ApproovService.setProceedOnNetworkFailure(proceed: true)
-```
-
-## getProceedOnNetworkFailure
-*OBSOLETE* Use `setServiceMutator` instead to customize the behavior of the service.
-Returns the current setting for proceed-on-network-failure.
-
-```swift
-let proceed = ApproovService.getProceedOnNetworkFailure()
-```
 
 ## setDevKey
 Sets a development key indicating that the app is a development version and it should
@@ -239,8 +224,8 @@ ApproovService.setDataHashInToken(data: "<data-to-hash>")
 Performs an Approov token fetch for the given URL. This should be used in situations where it
 is not possible to use the networking interception to add the token. This will
 likely require network access so may take some time to complete. If the attestation fails
-for any reason then an `ApproovError` is thrown. This will be `ApproovNetworkException` for
-networking issues wher a user initiated retry of the operation should be allowed. Note that
+for any reason then an `ApproovError` is thrown. This will be `ApproovError.networkingError` for
+networking issues where a user initiated retry of the operation should be allowed. Note that
 the returned token should *NEVER* be cached by your app, you should call this function when
 it is needed.
 

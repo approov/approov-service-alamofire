@@ -132,8 +132,8 @@ public class ApproovDefaultMessageSigning: ApproovServiceMutator {
                 sigId = "install"
                 guard let base64Signature = ApproovService.getInstallMessageSignature(message: message),
                       let decodedSignature = Data(base64Encoded: base64Signature) else {
-                    if ApproovService.loggingLevel >= .info {
-                        os_log("ApproovService: install message signature unavailable, skipping signing", type: .info)
+                    if ApproovService.loggingLevel >= .error {
+                        os_log("ApproovService: install message signature unavailable, skipping signing", type: .error)
                     }
                     return request
                 }
@@ -174,7 +174,9 @@ public class ApproovDefaultMessageSigning: ApproovServiceMutator {
                 if let sigBaseDigestHeader = try SFV.serializeDictionary(key: "sha-256", data: digest) {
                     signedRequest.addValue(sigBaseDigestHeader, forHTTPHeaderField: "Signature-Base-Digest")
                 } else {
-                    os_log("ApproovService: Failed to get digest algorithm - no debug entry", type: .debug)
+                    if ApproovService.loggingLevel >= .debug {
+                        os_log("ApproovService: Failed to get digest algorithm - no debug entry", type: .debug)
+                    }
                 }
             }
 
@@ -305,7 +307,9 @@ public class ApproovDefaultMessageSigning: ApproovServiceMutator {
             try defaultSignatureParametersFactory.setBodyDigestConfig(ApproovDefaultMessageSigning.DIGEST_SHA256, required: false)
         } catch {
             // ApproovDefaultMessageSigning.DIGEST_SHA256 is a supported body digest algorithm - will never throw
-            os_log("ApproovDefaultMessageSigning - generateDefaultSignatureParametersFactory: Failed to set default body digest algorithm", type: .error)
+            if ApproovService.loggingLevel >= .error {
+                os_log("ApproovDefaultMessageSigning - generateDefaultSignatureParametersFactory: Failed to set default body digest algorithm", type: .error)
+            }
         }
         return defaultSignatureParametersFactory
     }
