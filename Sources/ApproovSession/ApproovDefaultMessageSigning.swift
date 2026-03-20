@@ -670,4 +670,9 @@ class ApproovURLSessionComponentProvider: ComponentProvider {
 }
 
 @available(*, deprecated, message: "Use ApproovServiceMutator instead.")
-extension ApproovDefaultMessageSigning: ApproovInterceptorExtensions {}
+extension ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
+    @available(*, deprecated, message: "Use handleInterceptorProcessedRequest instead.")
+    public func processedRequest(_ request: URLRequest, changes: ApproovRequestMutations) throws -> URLRequest {
+        return try handleInterceptorProcessedRequest(request, changes: changes)
+    }
+}
