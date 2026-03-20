@@ -944,7 +944,9 @@ public class ApproovService {
         }
 
         // we only continue additional processing if we had a valid status from Approov, to prevent additional delays
-        if (approovResult.status != .success) && (approovResult.status != .unprotectedURL) {
+        // by trying to fetch from Approov again and this also protects against header substitutions in domains not
+        // protected by Approov and therefore are potentially subject to a MitM.
+        if approovResult.status != .success {
             return response
         }
 
