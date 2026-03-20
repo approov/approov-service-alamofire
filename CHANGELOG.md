@@ -4,15 +4,13 @@ All notable changes to this package will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
-## [Unreleased]
+
+## [3.5.5] - 2026-03-06
 
 ### Fixed
-- Restored default behavior: network failure cases (`.noNetwork`, `.poorNetwork`, `.mitmDetected`) now correctly block requests instead of silently proceeding without a token. This was a regression inadvertently introduced when `setProceedOnNetworkFailure` was completely removed from the code, mutating the interceptor handler logic.
 - Made `loggingLevel` thread-safe with a dedicated `loggingQueue` to prevent data races on concurrent reads/writes.
 - Gated all `os_log` calls in `ApproovTrustManager` behind `ApproovService.loggingLevel` so that `setLoggingLevel` controls all package logging consistently.
 - Fixed logging level guard mismatch in `ApproovDefaultMessageSigning` (`.info` → `.error`) and gated additional debug logs.
-
-## [3.5.5] - 2026-03-06
 
 ### Added
 - Added `REFERENCE.md` and `USAGE.md` documentation to match other Approov Swift service layers.

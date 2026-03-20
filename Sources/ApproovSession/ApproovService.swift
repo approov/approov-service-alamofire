@@ -250,7 +250,7 @@ public class ApproovService {
             approovTokenHeader = header
             approovTokenPrefix = prefix
             if loggingLevel >= .debug {
-                os_log("ApproovService: setApproovHeader: %@", type: .debug, header, prefix)
+                os_log("ApproovService: setApproovHeader: %@ %@", type: .debug, header, prefix)
             }
         }
     }
@@ -790,6 +790,17 @@ public class ApproovService {
      * @param request is the original request to be made
      * @return ApproovUpdateResponse providing an updated requests, plus an errors and status
      */
+    @available(*, deprecated, renamed: "updateRequestWithApproov(_:)")
+    public static func updateRequestWithApproov(request: URLRequest) -> ApproovUpdateResponse {
+        return updateRequestWithApproov(request)
+    }
+
+    /**
+     * Updates the request with Approov protection.
+     *
+     * @param request is the original request to be made
+     * @return ApproovUpdateResponse providing an updated requests, plus an errors and status
+     */
     public static func updateRequestWithApproov(_ request: URLRequest) -> ApproovUpdateResponse {
         var changes = ApproovRequestMutations()
 
@@ -947,7 +958,7 @@ public class ApproovService {
 
             // apply any header substitutions using the mutator policy
             for (header, prefix) in subsHeadersCopy {
-                if let headerValue = requestHeaders[header], headerValue.hasPrefix(prefix) {
+                if let headerValue = requestHeaders[header], headerValue.hasPrefix(prefix), headerValue.count > prefix.count {
                     let key = String(headerValue.dropFirst(prefix.count))
                     let approovResults = Approov.fetchSecureStringAndWait(key, nil)
 
