@@ -204,7 +204,10 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
                 
                 // we didn't find any matching pins
                 if ApproovService.loggingLevel >= .error {
-                    os_log("ApproovService: pin verification failed for %@ with no match for %d pins", host, pinsForHost.count)
+                    os_log("ApproovService: pin verification failed for %@ with no match for %d pins",
+                           type: .error,
+                           host,
+                           pinsForHost.count)
                 }
                 return false
             }

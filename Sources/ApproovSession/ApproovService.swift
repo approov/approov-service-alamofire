@@ -171,7 +171,7 @@ public class ApproovService {
                         try Approov.initialize(config, updateConfig: "auto", comment: comment)
                     }
                 } catch let error {
-                    // If the error is due to the SDK being initilized already, we ignore it otherwise we throw
+                    // If the error is due to the SDK being initialized already, we ignore it otherwise we throw
                     let nsError = error as NSError
                     if nsError.code == 0, nsError.domain == "Foundation._GenericObjCError" {
                         if loggingLevel >= .error {
@@ -1030,7 +1030,7 @@ public class ApproovService {
                             let approovResults = Approov.fetchSecureStringAndWait(String(queryValue), nil)
                             
                             if loggingLevel >= .info {
-                                os_log("ApproovService: Substituting query parameter: %@, %@", entry,
+                                os_log("ApproovService: Attempting query parameter substitution: %@, %@", entry,
                                     Approov.string(from: approovResults.status))
                             }
 
