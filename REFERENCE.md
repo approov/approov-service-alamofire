@@ -8,9 +8,12 @@ import ApproovAFSession
 
 Most methods either throw an `ApproovError` or return an `ApproovUpdateResponse`. The error cases to be aware of are:
 
+- `initializationError`: An error occurred during Approov SDK initialization.
+- `configurationError`: A configuration feature is disabled or wrongly configured (e.g. attempting to initialize with a different config from a previous instantiation).
+- `pinningError`: A certificate error occurred during pinning.
 - `networkingError`: A temporary networking issue; offer a retry.
-- `rejectionError`: Attestation rejected; includes ARC and rejection reasons if enabled.
-- `permanentError` / `configurationError` / `initializationError`: Non-retryable in normal flows.
+- `permanentError`: Might be due to a feature not enabled using the command line. Non-retryable.
+- `rejectionError`: An attestation has been rejected. The `ARC` and `rejectionReasons` may contain specific device information that would help troubleshooting.
 
 ## initialize
 Initializes the SDK with the config obtained using `approov sdk -getConfigString` or
