@@ -10,7 +10,15 @@ When adding this package with Swift Package Manager, import the module as:
 
 ```swift
 import ApproovAFSession
-import Approov
 ```
 
 The primary Alamofire session type remains `ApproovSession`.
+
+## Documentation
+
+This repository includes several Markdown files to help you understand and configure the Approov Service:
+
+- [**README.md**](README.md) - This file, providing a basic overview and import instructions.
+- [**USAGE.md**](USAGE.md) - Detailed guide on the features and functionality of the Approov Service, including how to interact with the service layer, customize its behavior with `ApproovServiceMutator`, and setup token binding or message signing.
+- [**ALAMOFIRE-OPTIONS.md**](ALAMOFIRE-OPTIONS.md) - Additional options specifically available with the Alamofire networking stack, such as network retry options and customizing the `Session`, `ServerTrustManager`, or network delegates.
+- [**CHANGELOG.md**](CHANGELOG.md) - Record of all notable changes, new features, and bug fixes for each version of the package.

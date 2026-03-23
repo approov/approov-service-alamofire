@@ -112,11 +112,25 @@ ApproovService.setServiceMutator(myMutator)
 ApproovService.setServiceMutator(nil)
 ```
 
+## getServiceMutator
+Gets the active service mutator instance that is handling callbacks from ApproovService.
+
+```swift
+let mutator = ApproovService.getServiceMutator()
+```
+
 ## setApproovInterceptorExtensions (deprecated)
 Backwards-compatible API for message signing; use `setServiceMutator` instead. This deprecated API forwards to `setServiceMutator` for backward compatibility.
 
 ```swift
 ApproovService.setApproovInterceptorExtensions(myExtensions)
+```
+
+## getApproovInterceptorExtensions (deprecated)
+Gets the interceptor extensions callback handlers. Backwards-compatible API for message signing; use `getServiceMutator` instead.
+
+```swift
+let extensions = ApproovService.getApproovInterceptorExtensions()
 ```
 
 ## addSubstitutionHeader
@@ -176,6 +190,13 @@ Removes an exclusion URL regular expression previously added using addExclusionU
 
 ```swift
 ApproovService.removeExclusionURLRegex(urlRegex: "^https://example\\.com/unprotected/.*$")
+```
+
+## getExclusionURLRegexs
+Gets a copy of the current exclusion URL regexs.
+
+```swift
+let regexs = ApproovService.getExclusionURLRegexs()
 ```
 
 ## prefetch
@@ -297,3 +318,4 @@ Updates a `URLRequest` with Approov protection (token, substitutions, etc.). Ret
 ```swift
 let response = ApproovService.updateRequestWithApproov(request)
 ```
+
