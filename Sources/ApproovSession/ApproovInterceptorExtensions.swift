@@ -20,8 +20,13 @@ import Foundation
  * ApproovInterceptorExtensions provides an interface for handling callbacks during
  * the processing of network requests by Approov. It allows further modifications
  * to requests after Approov has applied its changes.
+ *
+ * @deprecated Replace implementations of this protocol with ApproovServiceMutator
+ * while changing the name of the ApproovInterceptorExtensions.processedRequest
+ * method to ApproovServiceMutator.handleInterceptorProcessedRequest.
  */
-public protocol ApproovInterceptorExtensions {
+@available(*, deprecated, message: "Replace implementations of this protocol with ApproovServiceMutator.")
+public protocol ApproovInterceptorExtensions: ApproovServiceMutator {
 
     /**
      * Called after Approov has processed a network request, allowing further modifications.
@@ -32,5 +37,18 @@ public protocol ApproovInterceptorExtensions {
      * - Returns: The modified request.
      * - Throws: An `ApproovException` if there is an error during processing.
      */
+    @available(*, deprecated, message: "Use handleInterceptorProcessedRequest instead.")
     func processedRequest(_ request: URLRequest, changes: ApproovRequestMutations) throws -> URLRequest
+}
+
+public extension ApproovInterceptorExtensions {
+    func handleInterceptorProcessedRequest(_ request: URLRequest,
+                                           changes: ApproovRequestMutations) throws -> URLRequest {
+        return try processedRequest(request, changes: changes)
+    }
+
+    @available(*, deprecated, message: "Use handleInterceptorProcessedRequest instead.")
+    func processedRequest(_ request: URLRequest, changes: ApproovRequestMutations) throws -> URLRequest {
+        return request
+    }
 }

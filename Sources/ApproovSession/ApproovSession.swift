@@ -32,11 +32,11 @@ private class ApproovInterceptor: RequestInterceptor {
      * https://github.com/Alamofire/Alamofire/blob/master/Documentation/AdvancedUsage.md#adapting-and-retrying-requests-with-requestinterceptor
      */
     public func adapt(_ urlRequest: URLRequest, for session: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {
-        let ApproovUpdateResponse = ApproovService.updateRequestWithApproov(request: urlRequest)
-        if (ApproovUpdateResponse.decision == .ShouldProceed) || (ApproovUpdateResponse.decision == .ShouldIgnore) {
-            completion(.success(ApproovUpdateResponse.request))
+        let approovUpdateResponse = ApproovService.updateRequestWithApproov(urlRequest)
+        if (approovUpdateResponse.decision == .ShouldProceed) || (approovUpdateResponse.decision == .ShouldIgnore) {
+            completion(.success(approovUpdateResponse.request))
         } else {
-            completion(.failure(ApproovUpdateResponse.error!))
+            completion(.failure(approovUpdateResponse.error!))
         }
     }
 }

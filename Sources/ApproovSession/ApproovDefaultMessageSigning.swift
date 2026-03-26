@@ -24,7 +24,7 @@ import os.log
  * message signatures to HTTP requests based on specified parameters and
  * algorithms.
  */
-public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
+public class ApproovDefaultMessageSigning: ApproovServiceMutator {
 
     /**
      * Constant for the SHA-256 digest algorithm (used for body digests).
@@ -109,9 +109,9 @@ public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
      * - Returns: The processed HTTP request with the signature headers added.
      * - Throws: An `ApproovError` if an error occurs during processing.
      */
-    public func processedRequest(_ request: URLRequest, changes: ApproovRequestMutations) throws -> URLRequest {
+    public func handleInterceptorProcessedRequest(_ request: URLRequest, changes: ApproovRequestMutations) throws -> URLRequest {
         // If the request doesn't have an Approov token, we don't need to sign it
-        if (request.allHTTPHeaderFields?["Approov-Token"]) != nil {
+        if (request.allHTTPHeaderFields?[ApproovService.getApproovTokenHeader()]) != nil {
             // Generate and add a message signature
             let provider = ApproovURLSessionComponentProvider(request: request)
             guard let params = try buildSignatureParameters(provider: provider, changes: changes) else {
@@ -132,7 +132,10 @@ public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
                 sigId = "install"
                 guard let base64Signature = ApproovService.getInstallMessageSignature(message: message),
                       let decodedSignature = Data(base64Encoded: base64Signature) else {
-                    throw ApproovError.permanentError(message: "Failed to generate ES256 signature")
+                    if ApproovService.loggingLevel >= .error {
+                        os_log("ApproovService: install message signature unavailable, skipping signing", type: .error)
+                    }
+                    return request
                 }
                 // decode the signature from ASN.1 DER format
                 signature = try ApproovDefaultMessageSigning.decodeASN_1_DER_ES256_Signature(decodedSignature)
@@ -171,7 +174,9 @@ public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
                 if let sigBaseDigestHeader = try SFV.serializeDictionary(key: "sha-256", data: digest) {
                     signedRequest.addValue(sigBaseDigestHeader, forHTTPHeaderField: "Signature-Base-Digest")
                 } else {
-                    os_log("ApproovService: Failed to get digest algorithm - no debug entry", type: .debug)
+                    if ApproovService.loggingLevel >= .debug {
+                        os_log("ApproovService: Failed to get digest algorithm - no debug entry", type: .debug)
+                    }
                 }
             }
 
@@ -302,7 +307,9 @@ public class ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
             try defaultSignatureParametersFactory.setBodyDigestConfig(ApproovDefaultMessageSigning.DIGEST_SHA256, required: false)
         } catch {
             // ApproovDefaultMessageSigning.DIGEST_SHA256 is a supported body digest algorithm - will never throw
-            os_log("ApproovDefaultMessageSigning - generateDefaultSignatureParametersFactory: Failed to set default body digest algorithm", type: .error)
+            if ApproovService.loggingLevel >= .error {
+                os_log("ApproovDefaultMessageSigning - generateDefaultSignatureParametersFactory: Failed to set default body digest algorithm", type: .error)
+            }
         }
         return defaultSignatureParametersFactory
     }
@@ -659,5 +666,13 @@ class ApproovURLSessionComponentProvider: ComponentProvider {
 
     public func hasBody() -> Bool {
         return request.httpBody != nil || request.httpBodyStream != nil
+    }
+}
+
+@available(*, deprecated, message: "Use ApproovServiceMutator instead.")
+extension ApproovDefaultMessageSigning: ApproovInterceptorExtensions {
+    @available(*, deprecated, message: "Use handleInterceptorProcessedRequest instead.")
+    public func processedRequest(_ request: URLRequest, changes: ApproovRequestMutations) throws -> URLRequest {
+        return try handleInterceptorProcessedRequest(request, changes: changes)
     }
 }
