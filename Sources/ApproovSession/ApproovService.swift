@@ -904,6 +904,9 @@ public class ApproovService {
         var setTokenHeaderValue: String?
         var setTraceIDHeaderKey: String?
         var setTraceIDHeaderValue: String?
+        var setSubstitutionHeaders: [String: String] = [:]
+        var updateURL: URL?
+        var queryKeys: [String] = []
 
         // All paths proceeding past the Mutator imply the request should continue
         response.decision = .ShouldProceed
@@ -911,6 +914,58 @@ public class ApproovService {
         let tokenHeader = stateQueue.sync { return approovTokenHeader }
         let tokenPrefix = stateQueue.sync { return approovTokenPrefix }
         let useStatus = stateQueue.sync { return useApproovStatusIfNoToken }
+
+        // Finalizes the in-flight interceptor result by applying every staged mutation to
+        // `response.request` and then invoking the mutator post-processing callback.
+        //
+        // The function stages changes in local variables first so the success path and the
+        // "proceed without a valid token" path can share the same commit logic. This function:
+        // 1. Writes the Approov token header if one was prepared, which may contain either the
+        //    actual token or an Approov status string when `useApproovStatusIfNoToken` is enabled.
+        // 2. Writes the optional trace ID header.
+        // 3. Applies any secure string header substitutions.
+        // 4. Applies any query parameter substitutions and records them in `changes`.
+        // 5. Passes the fully mutated request through `handleInterceptorProcessedRequest`.
+        //
+        // Calling this before returning is essential for non-success statuses that are still
+        // allowed to proceed by the active mutator; without it the staged status header would
+        // never be written to the outgoing request.
+        func finalizeResponse() -> ApproovUpdateResponse {
+            if hasChanges {
+                if let tokenHeaderKey = setTokenHeaderKey,
+                   let tokenHeaderValue = setTokenHeaderValue {
+                    response.request.setValue(tokenHeaderValue, forHTTPHeaderField: tokenHeaderKey)
+                    changes.setTokenHeaderKey(tokenHeaderKey)
+                }
+                if let traceIDHeaderKey = setTraceIDHeaderKey,
+                   let traceIDHeaderValue = setTraceIDHeaderValue {
+                    response.request.setValue(traceIDHeaderValue, forHTTPHeaderField: traceIDHeaderKey)
+                    changes.setTraceIDHeaderKey(traceIDHeaderKey)
+                }
+                if !setSubstitutionHeaders.isEmpty {
+                    for (header, value) in setSubstitutionHeaders {
+                        response.request.setValue(value, forHTTPHeaderField: header)
+                    }
+                    changes.setSubstitutionHeaderKeys(Array(setSubstitutionHeaders.keys))
+                }
+                if let updateURLString = updateURL?.absoluteString,
+                   let originalURLString = request.url?.absoluteString,
+                   originalURLString != updateURLString {
+                    response.request.url = updateURL
+                    changes.setSubstitutionQueryParamResults(originalURL: originalURLString, substitutionQueryParamKeys: queryKeys)
+                }
+            }
+
+            do {
+                response.request = try mutator.handleInterceptorProcessedRequest(response.request, changes: changes)
+            } catch let error {
+                response.decision = .ShouldFail
+                response.error = ApproovError.permanentError(
+                    message: "Interceptor processed request error: \(error.localizedDescription)")
+            }
+
+            return response
+        }
 
         if approovResult.status == .success {
             // Success Path
@@ -947,12 +1002,11 @@ public class ApproovService {
         // by trying to fetch from Approov again and this also protects against header substitutions in domains not
         // protected by Approov and therefore are potentially subject to a MitM.
         if approovResult.status != .success {
-            return response
+            return finalizeResponse()
         }
 
         // we now deal with any headers substitutions, which may require further fetches but these
         // should be using cached results
-        var setSubstitutionHeaders: [String: String] = [:]
         if let requestHeaders = response.request.allHTTPHeaderFields {
             let subsHeadersCopy = stateQueue.sync {
                 return substitutionHeaders
@@ -1007,8 +1061,6 @@ public class ApproovService {
 
         // we now deal with any query parameter substitutions, which may require further fetches but these
         // should be using cached results
-        var updateURL: URL?
-        var queryKeys: [String] = []
         if let originalURL = request.url {
             let subsQueryParamsCopy = stateQueue.sync {
                 return substitutionQueryParams
@@ -1074,43 +1126,6 @@ public class ApproovService {
                 }
             }
         }
-        // apply all the changes to the request
-        if (hasChanges) {
-            if let tokenHeaderKey = setTokenHeaderKey,
-               let tokenHeaderValue = setTokenHeaderValue {
-                response.request.setValue(tokenHeaderValue, forHTTPHeaderField: tokenHeaderKey)
-                changes.setTokenHeaderKey(tokenHeaderKey);
-            }
-            if let traceIDHeaderKey = setTraceIDHeaderKey,
-               let traceIDHeaderValue = setTraceIDHeaderValue {
-                response.request.setValue(traceIDHeaderValue, forHTTPHeaderField: traceIDHeaderKey)
-                changes.setTraceIDHeaderKey(traceIDHeaderKey)
-            }
-            if (!setSubstitutionHeaders.isEmpty) {
-                for (header, value) in setSubstitutionHeaders {
-                    response.request.setValue(value, forHTTPHeaderField: header)
-                }
-                changes.setSubstitutionHeaderKeys(Array(setSubstitutionHeaders.keys))
-            }
-            if let updateURLString = updateURL?.absoluteString,
-               let originalURLString = request.url?.absoluteString {
-                if (originalURLString != updateURLString) {
-                    response.request.url = updateURL
-                    changes.setSubstitutionQueryParamResults(originalURL: originalURLString, substitutionQueryParamKeys: queryKeys);
-                }
-            }
-        }
-
-        // call the processed request callback
-        do {
-            response.request = try mutator.handleInterceptorProcessedRequest(response.request, changes: changes)
-        } catch let error {
-            response.decision = .ShouldFail
-            response.error = ApproovError.permanentError(
-                message: "Interceptor processed request error: \(error.localizedDescription)")
-            return response
-        }
-
-        return response
+        return finalizeResponse()
     }
 }

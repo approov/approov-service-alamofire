@@ -86,8 +86,8 @@ ApproovService.setBindingHeader(header: "Authorization")
 ## setUseApproovStatusIfNoToken
 Sets a flag indicating if the Approov fetch status (e.g. `NO_NETWORK`, `MITM_DETECTED`) should be
 used as the token header value if the actual token fetch fails or returns an empty token. This allows
-passing error condition information to the backend via the Approov-Token header, which might
-otherwise be empty or missing.
+passing error condition information to the backend via the Approov-Token header for requests that are
+allowed to proceed without a valid token, where it might otherwise be empty or missing.
 
 ```swift
 ApproovService.setUseApproovStatusIfNoToken(shouldUse: true)
@@ -321,4 +321,3 @@ Updates a `URLRequest` with Approov protection (token, substitutions, etc.). Ret
 ```swift
 let response = ApproovService.updateRequestWithApproov(request)
 ```
-

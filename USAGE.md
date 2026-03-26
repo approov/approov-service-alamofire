@@ -212,7 +212,7 @@ To enable this feature:
 ApproovService.setUseApproovStatusIfNoToken(shouldUse: true)
 ```
 
-When enabled, if the Approov token fetch fails or returns an empty token, the `Approov-Token` header will be populated with the status string (with the configured prefix) instead of being left empty.
+When enabled, if the Approov token fetch fails or returns an empty token, the `Approov-Token` header will be populated with the status string (with the configured prefix) instead of being left empty, provided the active mutator allows the request to proceed.
 
 ## Logging
 
