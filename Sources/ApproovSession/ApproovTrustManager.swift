@@ -151,6 +151,11 @@ public final class ApproovTrustEvaluator: ServerTrustEvaluating {
         // firstly we perform the default evaluation as it must also pass this
         try trust.af.performDefaultValidation(forHost: host)
         
+        // If the service layer is not enabled (empty-config bypass), skip dynamic pinning
+        if !ApproovService.isApproovEnabled() {
+            return
+        }
+
         // get the dynamic pins from Approov
         guard let approovPins = Approov.getPins("public-key-sha256") else {
             // just return if there are no Approov pins (this can happen if Approov is not initialized)
@@ -255,6 +260,9 @@ public class ApproovTrustManager: ServerTrustManager {
      * @return the ServerTrustEvaluating policy to be used
      */
     public override func serverTrustEvaluator(forHost host: String) throws -> ServerTrustEvaluating? {
+        if !ApproovService.isApproovEnabled() {
+            return try super.serverTrustEvaluator(forHost: host)
+        }
         if let approovPins = Approov.getPins("public-key-sha256") {
             // if Approov dynamic pins are available then we always use them for domains added to Approov
             if approovPins.keys.contains(host) {
