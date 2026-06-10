@@ -88,7 +88,9 @@ public class ApproovService {
     // the dispatch queue to manage serial access to intializer-modified variables
     private static let initializerQueue = DispatchQueue(label: "ApproovService.initializer", qos: .userInitiated)
 
-    // configuration string used for initialization
+    // configuration string used for initialization; stored to support the empty-then-valid
+    // upgrade guard. In this service layer, Approov-enabled state is tracked via the
+    // separate `approovEnabled` flag rather than by inspecting configString directly.
     private static var configString: String?
 
     // status of service layer initialization

@@ -49,6 +49,7 @@ jobs:
         with:
           repository: approov/core-service-layers-testing
           token: ${{ secrets.CORE_SERVICE_LAYERS_TESTING_PAT }}
+          ref: 1dbc1bba2135f20cd7a9868ac2eeea881906310c  # pin to vetted commit; update when pulling in new testing framework changes
           path: core-service-layers-testing
 
       # -----------------------------------------------------------------------
