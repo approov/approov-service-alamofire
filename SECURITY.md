@@ -2,13 +2,13 @@
 
 ## Supported Versions
 
-We maintain updates and patches in the latest release. Earlier versions will still work, but will have fewer functionalities than later versions.
+We maintain updates and patches in the latest release. Earlier versions will still work, but will have less functionality than later versions.
 We encourage all users of these service layers to update to the latest version for the best experience.
 
 | Version | Supported          |
 | ------- | ------------------ |
 | 3.5.x   | :white_check_mark: |
-| < 3.5.0 | :x:                |
+| < 3.5.0 (3.4.0) | :x:                |
 
 ## Reporting a Vulnerability
 

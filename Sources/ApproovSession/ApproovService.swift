@@ -503,8 +503,7 @@ public class ApproovService {
      * This means that if the query parameter is present in a URL then the value will be used as a
      * key to look up a secure string value which will be substituted as the query parameter value
      * instead. This allows easy migration to the use of secure strings. Note that this function
-     * should be called on initialization rather than for every request as it will require a new
-     * OkHttpClient to be built.
+     * should be called on initialization rather than for every request.
      *
      * @param key is the query parameter key name to be added for substitution
      */
