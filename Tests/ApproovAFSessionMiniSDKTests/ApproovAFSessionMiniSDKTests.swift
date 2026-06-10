@@ -47,8 +47,8 @@ final class ApproovAFSessionMiniSDKTests: XCTestCase {
         XCTAssertFalse(ApproovService.isApproovEnabled())
     }
 
-    /// §1 Empty Configuration (Empty Comment)
-    func testInitializeWithEmptyConfigEmptyComment() throws {
+    /// §1 Empty Configuration (Nil Comment — distinct from empty-string comment per TESTING_REQUIREMENTS §1)
+    func testInitializeWithEmptyConfigNilComment() throws {
         ApproovService.resetForTesting()
         try ApproovService.initialize(config: "", comment: nil)
         XCTAssertTrue(ApproovService.isInitialized())

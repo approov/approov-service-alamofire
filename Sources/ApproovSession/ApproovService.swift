@@ -247,7 +247,7 @@ public class ApproovService {
     public static func getLastARC() -> String {
         if !isApproovEnabled() {
             if loggingLevel >= .error {
-                os_log("ApproovService: getLastARC: SDK not initialized", type: .error)
+                os_log("ApproovService: getLastARC: Approov protection not enabled", type: .error)
             }
             return ""
         }
@@ -927,7 +927,7 @@ public class ApproovService {
         }
 
         if let url = request.url {
-            if !serviceIsInitialized || !approovEnabled {
+            if !isInitialized() || !isApproovEnabled() {
                 if loggingLevel >= .info {
                     os_log("ApproovService: not initialized or not enabled, forwarding: %@", type: .info, url.absoluteString)
                 }
@@ -972,7 +972,7 @@ public class ApproovService {
         if approovResult.isConfigChanged {
             Approov.fetchConfig()
             if loggingLevel >= .info {
-                os_log("ApproovService: dynamic configuration update received")
+                os_log("ApproovService: dynamic configuration update performed")
             }
         }
 
