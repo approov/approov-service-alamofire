@@ -88,11 +88,6 @@ public class ApproovService {
     // the dispatch queue to manage serial access to intializer-modified variables
     private static let initializerQueue = DispatchQueue(label: "ApproovService.initializer", qos: .userInitiated)
 
-    // configuration string used for initialization; stored to support the empty-then-valid
-    // upgrade guard. In this service layer, Approov-enabled state is tracked via the
-    // separate `approovEnabled` flag rather than by inspecting configString directly.
-    private static var configString: String?
-
     // status of service layer initialization
     private static var serviceIsInitialized = false
 
@@ -164,10 +159,33 @@ public class ApproovService {
 
     /**
      * Initializes the SDK with the config obtained using `approov sdk -getConfigString` or
-     * in the original onboarding email. The service layer resets its own configuration state
-     * on a successful call. If using a non-empty config, the platform SDK is contacted first;
-     * state is only modified after the SDK confirms success, preserving the current operating
-     * mode (protected or bypass) if the call fails.
+     * in the original onboarding email.
+     *
+     * Initialize ONCE, then configure. Every successful call RESETS all service-layer
+     * configuration — token header and prefix, binding header, trace-ID header, header and
+     * query-parameter substitutions, exclusion URL regexs, and the service mutator — back to
+     * their defaults. Any values set via `setTokenHeader` / `addSubstitutionHeader` /
+     * `addExclusionURLRegex` / `setServiceMutator` (etc.) must therefore be applied AFTER the
+     * final initialize call: re-initializing afterwards, even with the same config, silently
+     * discards them. A warning is logged when a re-initialization discards existing state.
+     *
+     * Calls are forwarded to the native Approov SDK, which is the authority on configuration
+     * identity (it compares the config, the update config AND the comment). The resulting
+     * behaviour is:
+     *   - empty config: initializes the service layer in bypass mode (native SDK not enabled);
+     *   - empty config after a valid init: ignored — no downgrade to bypass and, unlike a
+     *     valid re-initialize, the existing service-layer configuration is preserved (not reset);
+     *   - same config + same comment after a valid init: accepted as a no-op by the native SDK,
+     *     but the service layer still resets its configuration to defaults;
+     *   - same config + a different non-"reinit" comment, or a different config without a
+     *     "reinit" comment: rejected by the native SDK — an `.initializationError` is thrown and
+     *     the existing state is preserved;
+     *   - a "reinit"-prefixed comment: the native SDK reinitializes and the service layer
+     *     resets its configuration to defaults.
+     *
+     * If a non-empty config is used the native SDK is contacted first; service-layer state is
+     * only modified after the SDK confirms success, preserving the current operating mode
+     * (protected or bypass) if the call fails.
      *
      * @param config is the configuration to be used, or an empty string to bypass the actual initialization
      * @param comment is an optional comment to be passed to the SDK
@@ -175,9 +193,10 @@ public class ApproovService {
      */
     public static func initialize(config: String, comment: String? = nil) throws {
         try initializerQueue.sync {
-            // If we are already initialized with a valid config, ignore any subsequent
-            // attempt to initialize with an empty config (cannot downgrade from protected
-            // to bypass mode).
+            // Deliberate strict no-op: once protected, an empty config is ignored entirely.
+            // There is no downgrade from protected to bypass mode and — unlike a valid
+            // re-initialize — the existing service-layer configuration is preserved rather
+            // than reset to defaults (see this method's documentation for the full matrix).
             if approovEnabled && config.isEmpty {
                 if loggingLevel >= .info {
                     os_log("ApproovService: ignoring empty config after valid initialization", type: .info)
@@ -212,19 +231,14 @@ public class ApproovService {
             }
 
             // SDK succeeded (or bypass) — now reset and commit new service-layer state.
-            serviceIsInitialized = false
-            configString = config
-            stateQueue.sync {
-                bindingHeader = ""
-                approovTokenHeader = "Approov-Token"
-                approovTokenPrefix = ""
-                approovTraceIDHeader = "Approov-TraceID"
-                serviceMutator = ApproovServiceMutatorDefault.shared
-                substitutionHeaders = Dictionary()
-                substitutionQueryParams = Set()
-                exclusionURLRegexs = Dictionary()
-                useApproovStatusIfNoToken = false
+            // A successful initialize always resets the service layer's own configuration
+            // back to defaults; warn if this discards an existing (re-initialize) setup so
+            // that the unsupported "initialize again" pattern is observable.
+            if serviceIsInitialized && loggingLevel >= .warning {
+                os_log("ApproovService: re-initializing — all service-layer configuration (token header, prefixes, substitutions, exclusions, mutator) is being reset to defaults", type: .default)
             }
+            serviceIsInitialized = false
+            resetServiceConfiguration()
             serviceIsInitialized = true
             if !config.isEmpty {
                 approovEnabled = true
@@ -1241,15 +1255,12 @@ public class ApproovService {
     }
 
     /**
-     * Resets all service-layer state back to defaults. This is intended for testing only
-     * and should never be called in production code.
+     * Resets all configurable service-layer state (headers, prefixes, substitutions,
+     * exclusions and the service mutator) back to their defaults. Acquires `stateQueue`
+     * internally, so callers must not already hold it. Initialization flags
+     * (`serviceIsInitialized` / `approovEnabled`) are managed separately by the caller.
      */
-    static func resetForTesting() {
-        initializerQueue.sync {
-            serviceIsInitialized = false
-            approovEnabled = false
-            configString = nil
-        }
+    private static func resetServiceConfiguration() {
         stateQueue.sync {
             bindingHeader = ""
             approovTokenHeader = "Approov-Token"
@@ -1261,6 +1272,18 @@ public class ApproovService {
             exclusionURLRegexs = Dictionary()
             useApproovStatusIfNoToken = false
         }
+    }
+
+    /**
+     * Resets all service-layer state back to defaults. This is intended for testing only
+     * and should never be called in production code.
+     */
+    static func resetForTesting() {
+        initializerQueue.sync {
+            serviceIsInitialized = false
+            approovEnabled = false
+        }
+        resetServiceConfiguration()
         loggingLevel = .info
     }
 }
