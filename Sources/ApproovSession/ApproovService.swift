@@ -88,11 +88,11 @@ public class ApproovService {
     // the dispatch queue to manage serial access to intializer-modified variables
     private static let initializerQueue = DispatchQueue(label: "ApproovService.initializer", qos: .userInitiated)
 
-    // configuration string used for initialization
-    private static var configString: String?
+    // status of service layer initialization
+    private static var serviceIsInitialized = false
 
-    // status of Approov SDK initialization
-    private static var isInitialized = false
+    // whether the native Approov SDK has been successfully initialized with a non-empty config
+    private static var approovEnabled = false
 
     // the dispatch queue to manage serial access to other ApproovService state
     private static let stateQueue = DispatchQueue(label: "ApproovService.state", qos: .userInitiated)
@@ -138,52 +138,119 @@ public class ApproovService {
     private static var exclusionURLRegexs: Dictionary<String, NSRegularExpression> = Dictionary()
     
     /**
+     * Returns whether the service layer has been initialized. Returns true even for
+     * empty-config bypass mode.
+     *
+     * @return true if the service layer has been initialized
+     */
+    public static func isInitialized() -> Bool {
+        return initializerQueue.sync { serviceIsInitialized }
+    }
+
+    /**
+     * Returns whether Approov protection is currently enabled. Returns true only when
+     * the service layer has been initialized with a valid, non-empty configuration string.
+     *
+     * @return true if Approov protection is active
+     */
+    public static func isApproovEnabled() -> Bool {
+        return initializerQueue.sync { approovEnabled }
+    }
+
+    /**
      * Initializes the SDK with the config obtained using `approov sdk -getConfigString` or
-     * in the original onboarding email. Note the initializer function should only ever be called once.
-     * Subsequent calls will be ignored since the ApproovSDK can only be initialized once; if however,
-     * an attempt is made to initialize with a different configuration (config) we throw an
-     * ApproovException.configurationError. If the Approov SDK fails to be initialized for some other
-     * reason, an .initializationError is raised.
+     * in the original onboarding email.
+     *
+     * Initialize ONCE, then configure. Every successful call RESETS all service-layer
+     * configuration — token header and prefix, binding header, trace-ID header, header and
+     * query-parameter substitutions, exclusion URL regexs, and the service mutator — back to
+     * their defaults. Any values set via `setTokenHeader` / `addSubstitutionHeader` /
+     * `addExclusionURLRegex` / `setServiceMutator` (etc.) must therefore be applied AFTER the
+     * final initialize call: re-initializing afterwards, even with the same config, silently
+     * discards them. A warning is logged when a re-initialization discards existing state.
+     *
+     * Calls are forwarded to the native Approov SDK, which is the authority on configuration
+     * identity (it compares the config, the update config AND the comment). The resulting
+     * behaviour is:
+     *   - empty config: initializes the service layer in bypass mode (native SDK not enabled);
+     *   - empty config after a valid init: ignored — no downgrade to bypass and, unlike a
+     *     valid re-initialize, the existing service-layer configuration is preserved (not reset);
+     *   - same config + same comment after a valid init: accepted as a no-op by the native SDK,
+     *     but the service layer still resets its configuration to defaults;
+     *   - same config + a different non-"reinit" comment, or a different config without a
+     *     "reinit" comment: rejected by the native SDK — an `.initializationError` is thrown and
+     *     the existing state is preserved;
+     *   - a "reinit"-prefixed comment: the native SDK reinitializes and the service layer
+     *     resets its configuration to defaults.
+     *
+     * If a non-empty config is used the native SDK is contacted first; service-layer state is
+     * only modified after the SDK confirms success, preserving the current operating mode
+     * (protected or bypass) if the call fails.
      *
      * @param config is the configuration to be used, or an empty string to bypass the actual initialization
      * @param comment is an optional comment to be passed to the SDK
      * @throws ApproovError if there was a problem
      */
     public static func initialize(config: String, comment: String? = nil) throws {
-        try initializerQueue.sync  {
-            // check if we attempt to use a different configString
-            if isInitialized && ((comment?.hasPrefix("reinit")) == nil) {
-                // ignore multiple initialization calls that use the same configuration
-                if (config != configString) {
-                    // throw exception indicating we are attempting to use different config
-                    if loggingLevel >= .error {
-                        os_log("ApproovService: Attempting to initialize with different configuration", type: .error)
-                    }
-                    throw ApproovError.configurationError(message: "Attempting to initialize with a different configuration")
+        try initializerQueue.sync {
+            // Deliberate strict no-op: once protected, an empty config is ignored entirely.
+            // There is no downgrade from protected to bypass mode and — unlike a valid
+            // re-initialize — the existing service-layer configuration is preserved rather
+            // than reset to defaults (see this method's documentation for the full matrix).
+            if approovEnabled && config.isEmpty {
+                if loggingLevel >= .info {
+                    os_log("ApproovService: ignoring empty config after valid initialization", type: .info)
                 }
-                if loggingLevel >= .warning {
-                    os_log("ApproovService: Ignoring multiple ApproovService layer initializations with the same config");
-                }
-            } else {
+                return
+            }
+
+            // Forward all non-empty configs to the native SDK without filtering.
+            // The service layer must not intercept, filter, or short-circuit calls
+            // based on its internal state (spec §1 line 25).
+            if !config.isEmpty {
                 do {
-                    if !config.isEmpty {
-                        // only initialize with a non-empty string as empty string used to bypass this
-                        try Approov.initialize(config, updateConfig: "auto", comment: comment)
-                    }
+                    try Approov.initialize(config, updateConfig: "auto", comment: comment)
                 } catch let error {
-                    // If the error is due to the SDK being initialized already, we ignore it otherwise we throw
+                    // The Swift/Objective-C bridge translates a BOOL=NO return into
+                    // a thrown error with code 0 and domain Foundation._GenericObjCError.
+                    // This indicates "already initialized with the same config" — a benign
+                    // outcome that we treat as success.
                     let nsError = error as NSError
                     if nsError.code == 0, nsError.domain == "Foundation._GenericObjCError" {
-                        if loggingLevel >= .error {
-                            os_log("ApproovService: Ignoring initialization error in Approov SDK: %@", type: .error, nsError.localizedDescription)
+                        if loggingLevel >= .info {
+                            os_log("ApproovService: native SDK already initialized (same config): %@", type: .info, nsError.localizedDescription)
                         }
                     } else {
+                        // Real failure — leave service-layer state completely unchanged
+                        if loggingLevel >= .error {
+                            os_log("ApproovService: initialization failed: %@", type: .error, nsError.localizedDescription)
+                        }
                         throw ApproovError.initializationError(message: "Error initializing Approov SDK: \(nsError.localizedDescription)")
                     }
                 }
-                isInitialized = true
-                configString = config
+            }
+
+            // SDK succeeded (or bypass) — now reset and commit new service-layer state.
+            // A successful initialize always resets the service layer's own configuration
+            // back to defaults; warn if this discards an existing (re-initialize) setup so
+            // that the unsupported "initialize again" pattern is observable.
+            if serviceIsInitialized && loggingLevel >= .warning {
+                os_log("ApproovService: re-initializing — all service-layer configuration (token header, prefixes, substitutions, exclusions, mutator) is being reset to defaults", type: .default)
+            }
+            serviceIsInitialized = false
+            resetServiceConfiguration()
+            serviceIsInitialized = true
+            if !config.isEmpty {
+                approovEnabled = true
                 Approov.setUserProperty("approov-service-alamofire")
+                if loggingLevel >= .info {
+                    os_log("ApproovService: initialized with Approov protection enabled", type: .info)
+                }
+            } else {
+                approovEnabled = false
+                if loggingLevel >= .info {
+                    os_log("ApproovService: initialized in bypass mode (empty config)", type: .info)
+                }
             }
         }
     }
@@ -194,6 +261,12 @@ public class ApproovService {
      * @return String of the last ARC or empty string if there was none
      */
     public static func getLastARC() -> String {
+        if !isApproovEnabled() {
+            if loggingLevel >= .error {
+                os_log("ApproovService: getLastARC: Approov protection not enabled", type: .error)
+            }
+            return ""
+        }
         // We have to get the current config and obtain one protected API endpoint at least
         // get the dynamic pins from Approov
         guard let approovPins = Approov.getPins("public-key-sha256") else {
@@ -204,14 +277,13 @@ public class ApproovService {
         }
         // The approovPins contains a map of hostnames to pin strings.  We need to skip the '*' entry (Managed Trust Roots),
         // and use another hostname if available.
-            if let hostname = approovPins.keys.first(where: { $0 != "*" }) {
-                let result = Approov.fetchTokenAndWait(hostname)
-                // Check if a token was fetched successfully and return its arc code
-                if result.token.count > 0 {
-                    return result.arc
-                }
+        if let hostname = approovPins.keys.first(where: { $0 != "*" }) {
+            let result = Approov.fetchTokenAndWait(hostname)
+            // Check if a token was fetched successfully and return its arc code
+            if result.token.count > 0 {
+                return result.arc
             }
-        
+        }
         if loggingLevel >= .info {
             os_log("ApproovService: ARC code unavailable", type: .info)
         }
@@ -229,6 +301,12 @@ public class ApproovService {
      * @param devKey is the development key to be used
      */
     public static func setDevKey(devKey: String) {
+        if !isApproovEnabled() {
+            if loggingLevel >= .error {
+                os_log("ApproovService: setDevKey: SDK not initialized", type: .error)
+            }
+            return
+        }
         stateQueue.sync {
             Approov.setDevKey(devKey)
             if loggingLevel >= .debug {
@@ -441,8 +519,7 @@ public class ApproovService {
      * This means that if the query parameter is present in a URL then the value will be used as a
      * key to look up a secure string value which will be substituted as the query parameter value
      * instead. This allows easy migration to the use of secure strings. Note that this function
-     * should be called on initialization rather than for every request as it will require a new
-     * OkHttpClient to be built.
+     * should be called on initialization rather than for every request.
      *
      * @param key is the query parameter key name to be added for substitution
      */
@@ -534,7 +611,7 @@ public class ApproovService {
      */
     public static func prefetch() {
         initializerQueue.sync {
-            if isInitialized {
+            if serviceIsInitialized && approovEnabled {
                 Approov.fetchToken({(approovResult: ApproovTokenFetchResult) in
                     if approovResult.status == ApproovTokenFetchStatus.unknownURL {
                         if loggingLevel >= .debug {
@@ -563,6 +640,12 @@ public class ApproovService {
      * @throws ApproovError if there was a problem
      */
     public static func precheck() throws {
+        if !isApproovEnabled() {
+            if loggingLevel >= .error {
+                os_log("ApproovService: precheck: SDK not initialized", type: .error)
+            }
+            throw ApproovError.permanentError(message: "ApproovService: precheck requires Approov to be enabled")
+        }
         // try to fetch a non-existent secure string in order to check for a rejection
         let approovResults = Approov.fetchSecureStringAndWait("precheck-dummy-key", nil)
         if approovResults.status == ApproovTokenFetchStatus.unknownKey {
@@ -588,6 +671,12 @@ public class ApproovService {
      * @return String of the device ID or nil in case of an error
      */
     public static func getDeviceID() -> String? {
+        if !isApproovEnabled() {
+            if loggingLevel >= .error {
+                os_log("ApproovService: getDeviceID: SDK not initialized", type: .error)
+            }
+            return nil
+        }
         let deviceID = Approov.getDeviceID()
         if (deviceID != nil) {
             if loggingLevel >= .debug {
@@ -607,6 +696,12 @@ public class ApproovService {
      * @param data is the data to be hashed and set in the token
      */
     public static func setDataHashInToken(data: String) {
+        if !isApproovEnabled() {
+            if loggingLevel >= .error {
+                os_log("ApproovService: setDataHashInToken: SDK not initialized", type: .error)
+            }
+            return
+        }
         if loggingLevel >= .debug {
             os_log("ApproovService: setDataHashInToken", type: .debug)
         }
@@ -627,6 +722,12 @@ public class ApproovService {
      * @throws ApproovError if there was a problem
      */
     public static func fetchToken(url: String) throws -> String {
+        if !isApproovEnabled() {
+            if loggingLevel >= .error {
+                os_log("ApproovService: fetchToken: SDK not initialized", type: .error)
+            }
+            throw ApproovError.permanentError(message: "ApproovService: fetchToken requires Approov to be enabled")
+        }
         // fetch the Approov token
         let result: ApproovTokenFetchResult = Approov.fetchTokenAndWait(url)
         if loggingLevel >= .debug {
@@ -659,6 +760,12 @@ public class ApproovService {
      * @return String of the base64 encoded message signature
      */
     public static func getAccountMessageSignature(message: String) -> String? {
+        if !isApproovEnabled() {
+            if loggingLevel >= .error {
+                os_log("ApproovService: getAccountMessageSignature: SDK not initialized", type: .error)
+            }
+            return nil
+        }
         if loggingLevel >= .debug {
             os_log("ApproovService: getAccountMessageSignature", type: .debug)
         }
@@ -673,6 +780,12 @@ public class ApproovService {
      * @return String of the base64 encoded message signature
      */
     public static func getInstallMessageSignature(message: String) -> String? {
+        if !isApproovEnabled() {
+            if loggingLevel >= .error {
+                os_log("ApproovService: getInstallMessageSignature: SDK not initialized", type: .error)
+            }
+            return nil
+        }
         if loggingLevel >= .debug {
             os_log("ApproovService: getInstallMessageSignature", type: .debug)
         }
@@ -698,6 +811,12 @@ public class ApproovService {
      * @throws ApproovError if there was a problem
      */
     public static func fetchSecureString(key: String, newDef: String?) throws -> String? {
+        if !isApproovEnabled() {
+            if loggingLevel >= .error {
+                os_log("ApproovService: fetchSecureString: SDK not initialized", type: .error)
+            }
+            throw ApproovError.permanentError(message: "ApproovService: fetchSecureString requires Approov to be enabled")
+        }
         // determine the type of operation as the values themselves cannot be logged
         var type = "lookup"
         if newDef != nil {
@@ -730,6 +849,12 @@ public class ApproovService {
      * @throws ApproovError if there was a problem
      */
     public static func fetchCustomJWT(payload: String) throws -> String? {
+        if !isApproovEnabled() {
+            if loggingLevel >= .error {
+                os_log("ApproovService: fetchCustomJWT: SDK not initialized", type: .error)
+            }
+            throw ApproovError.permanentError(message: "ApproovService: fetchCustomJWT requires Approov to be enabled")
+        }
         // fetch the custom JWT
         let approovResult = Approov.fetchCustomJWTAndWait(payload)
         if loggingLevel >= .info {
@@ -818,9 +943,9 @@ public class ApproovService {
         }
 
         if let url = request.url {
-            if !isInitialized {
+            if !isInitialized() || !isApproovEnabled() {
                 if loggingLevel >= .info {
-                    os_log("ApproovService: not initialized, forwarding: %@", type: .info, url.absoluteString)
+                    os_log("ApproovService: not initialized or not enabled, forwarding: %@", type: .info, url.absoluteString)
                 }
                 return ApproovUpdateResponse(request: request, decision: .ShouldIgnore, sdkMessage: "", error: nil)
             }
@@ -863,7 +988,7 @@ public class ApproovService {
         if approovResult.isConfigChanged {
             Approov.fetchConfig()
             if loggingLevel >= .info {
-                os_log("ApproovService: dynamic configuration update received")
+                os_log("ApproovService: dynamic configuration update performed")
             }
         }
 
@@ -1127,5 +1252,38 @@ public class ApproovService {
             }
         }
         return finalizeResponse()
+    }
+
+    /**
+     * Resets all configurable service-layer state (headers, prefixes, substitutions,
+     * exclusions and the service mutator) back to their defaults. Acquires `stateQueue`
+     * internally, so callers must not already hold it. Initialization flags
+     * (`serviceIsInitialized` / `approovEnabled`) are managed separately by the caller.
+     */
+    private static func resetServiceConfiguration() {
+        stateQueue.sync {
+            bindingHeader = ""
+            approovTokenHeader = "Approov-Token"
+            approovTokenPrefix = ""
+            approovTraceIDHeader = "Approov-TraceID"
+            serviceMutator = ApproovServiceMutatorDefault.shared
+            substitutionHeaders = Dictionary()
+            substitutionQueryParams = Set()
+            exclusionURLRegexs = Dictionary()
+            useApproovStatusIfNoToken = false
+        }
+    }
+
+    /**
+     * Resets all service-layer state back to defaults. This is intended for testing only
+     * and should never be called in production code.
+     */
+    static func resetForTesting() {
+        initializerQueue.sync {
+            serviceIsInitialized = false
+            approovEnabled = false
+        }
+        resetServiceConfiguration()
+        loggingLevel = .info
     }
 }

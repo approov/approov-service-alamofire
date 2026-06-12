@@ -1,0 +1,198 @@
+name: Build and Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      WORKSPACE: "${{ github.workspace }}"
+      GIT_BRANCH: "${{ github.ref }}"
+      CURRENT_TAG: "${{ github.ref_name }}"
+      # Worker endpoints: consumed from GitHub organisation variables first.
+      # If the org variable is not set the value is an empty string; the probe
+      # step below falls back to the same hardcoded defaults that are baked into
+      # the mini-sdk (MiniAttesterConfig / Approov.m), keeping them in sync.
+      # Worker management (create / redeploy) logic is centralized in the
+      # core-service-layers-testing script, but invoked here when needed.
+      TESTING_REPLY_URL: ${{ vars.TESTING_REPLY_URL }}
+      TESTING_REPLY_URL_UNPROTECTED: ${{ vars.TESTING_REPLY_URL_UNPROTECTED }}
+      # Required for the redeploy script invocation on failure
+      CLOUDFLARE_API_TOKEN_WORKERS_DEV: ${{ secrets.CLOUDFLARE_API_TOKEN_WORKERS_DEV }}
+      CLOUDFLARE_ACCOUNT_ID_WORKERS_DEV: ${{ secrets.CLOUDFLARE_ACCOUNT_ID_WORKERS_DEV }}
+      # iOS Mini-SDK configuration for Package.swift
+      APPROOV_USE_MINI_SDK: "1"
+      APPROOV_MINI_SDK_PATH: "../core-service-layers-testing/mini-sdk/ios"
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout this repository
+      # -----------------------------------------------------------------------
+      - name: Set up Git
+        run: git config --global --add safe.directory '*'
+
+      - name: Checkout approov-service-alamofire
+        uses: actions/checkout@v5
+        with:
+          path: approov-service-alamofire
+
+      # -----------------------------------------------------------------------
+      # 2. Clone core-service-layers-testing as a sibling directory
+      #    Package.swift expects: ../core-service-layers-testing/...
+      #    so both repos must sit under the same parent ($GITHUB_WORKSPACE).
+      # -----------------------------------------------------------------------
+      - name: Checkout core-service-layers-testing
+        uses: actions/checkout@v5
+        with:
+          repository: approov/core-service-layers-testing
+          token: ${{ secrets.CORE_SERVICE_LAYERS_TESTING_PAT }}
+          ref: 1dbc1bba2135f20cd7a9868ac2eeea881906310c  # pin to vetted commit; update when pulling in new testing framework changes
+          path: core-service-layers-testing
+
+      # -----------------------------------------------------------------------
+      # 3. Verify worker endpoints (with auto-redeploy)
+      #
+      #    URLs are resolved with the following precedence (mirrors the mini-sdk
+      #    fallback logic in MiniAttesterConfig / Approov.m):
+      #      1. GitHub org variable  (TESTING_REPLY_URL / _UNPROTECTED)
+      #      2. Mini-SDK hardcoded defaults (replay.ivol.workers.dev / ...)
+      #
+      #    If the workers are unavailable, this step invokes the management
+      #    script in core-service-layers-testing to redeploy them.
+      # -----------------------------------------------------------------------
+      - name: Verify worker endpoints
+        run: |
+          # ── URL resolution ──────────────────────────────────────────────────
+          PROTECTED_URL="${TESTING_REPLY_URL:-https://replay.ivol.workers.dev}"
+          UNPROTECTED_URL="${TESTING_REPLY_URL_UNPROTECTED:-https://replay-unprotected.ivol.workers.dev}"
+          
+          echo "TESTING_REPLY_URL=$PROTECTED_URL"       >> "$GITHUB_ENV"
+          echo "TESTING_REPLY_URL_UNPROTECTED=$UNPROTECTED_URL" >> "$GITHUB_ENV"
+
+          # ── Probe function ──────────────────────────────────────────────────
+          probe_worker() {
+            local url="$1"
+            curl --silent --show-error --fail --max-time 10 \
+              -X POST "$url" \
+              -H "Content-Type: application/json" \
+              -d '{"check":"probe"}' | grep -q '"body"'
+          }
+
+          echo "==> Probing workers..."
+          if probe_worker "$PROTECTED_URL" && probe_worker "$UNPROTECTED_URL"; then
+            echo "    All workers are healthy."
+            exit 0
+          fi
+
+          echo "    WARNING: One or more workers are down. Attempting redeploy..."
+          
+          # ── Invoke redeploy script ──────────────────────────────────────────
+          # The script is in the sibling directory cloned in Step 2.
+          # It uses the CLOUDFLARE_* env variables defined at the job level.
+          ./core-service-layers-testing/cloudflare-workers/redeploy-workers.sh
+
+          echo "==> Verifying after redeploy..."
+          # Try up to 3 times with a 5s delay between attempts
+          for i in {1..3}; do
+            if probe_worker "$PROTECTED_URL" && probe_worker "$UNPROTECTED_URL"; then
+              echo "    Workers successfully restored."
+              exit 0
+            fi
+            echo "    Waiting for propagation (attempt $i/3)..."
+            sleep 5
+          done
+
+          echo "ERROR: Workers are still unreachable after redeployment effort."
+          exit 1
+
+      # -----------------------------------------------------------------------
+      # 5. Build and run tests
+      #    Swift is invoked from inside the checked-out service directory.
+      #    The mini-sdk is already available via the sibling path wired into
+      #    Package.swift — no extra configuration needed here.
+      # -----------------------------------------------------------------------
+      - name: Build and Test (SwiftPM)
+        working-directory: approov-service-alamofire
+        env:
+          TESTING_REPLY_URL: ${{ env.TESTING_REPLY_URL }}
+          TESTING_REPLY_URL_UNPROTECTED: ${{ env.TESTING_REPLY_URL_UNPROTECTED }}
+        run: |
+          set -o pipefail
+          swift test --verbose 2>&1 | tee test_output.txt
+
+      # -----------------------------------------------------------------------
+      # 6. Print test summary
+      #    Parses the Swift test output captured in the previous step.
+      # -----------------------------------------------------------------------
+      - name: Print test summary
+        if: always()
+        working-directory: approov-service-alamofire
+        run: |
+          python3 - <<'EOF'
+          import os, sys, re
+
+          PASS  = "\u2705"
+          FAIL  = "\u274c"
+          SKIP  = "\u23ed\ufe0f"
+
+          output_path = "test_output.txt"
+          if not os.path.exists(output_path):
+              print("No test output found.")
+              sys.exit(1)
+
+          with open(output_path, "r") as f:
+              lines = f.readlines()
+
+          # Regex for Swift/XCTest output:
+          # Test Case '-[Suite.TestClass testName]' passed (0.123 seconds).
+          test_re = re.compile(r"Test Case '-\[(?P<suite>[^. ]+)\.(?P<class>[^ ]+) (?P<name>[^\]]+)\]' (?P<status>passed|failed) \((?P<time>[0-9.]+) seconds\)")
+          
+          results = []
+          for line in lines:
+              match = test_re.search(line)
+              if match:
+                  results.append({
+                      "name": match.group("name"),
+                      "class": match.group("class"),
+                      "status": match.group("status"),
+                      "time": float(match.group("time"))
+                  })
+
+          if not results:
+              print("No tests were detected in the output.")
+              # If we saw "0 tests passed" in the log, let's look for why.
+              sys.exit(1)
+
+          total = len(results)
+          passed = sum(1 for r in results if r["status"] == "passed")
+          failed = total - passed
+          overall_ok = (failed == 0)
+
+          # ── Console output ──────────────────────────────────────────────────
+          icon = PASS if overall_ok else FAIL
+          print()
+          print(f"{'='*70}")
+          print(f"  {icon}  Swift Test Summary  |  {passed}/{total} passed  |  {failed} failed")
+          print(f"{'='*70}")
+          for r in results:
+              print(f"  {PASS if r['status'] == 'passed' else FAIL}  {r['name']:<55} ({r['time']:.3f}s)")
+          print()
+
+          # ── GitHub Job Summary (markdown) ───────────────────────────────────
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY", "")
+          if summary_path:
+              with open(summary_path, "a") as md:
+                  badge = "\U0001f7e2 PASSED" if overall_ok else "\U0001f534 FAILED"
+                  md.write(f"### Swift Tests &nbsp; {badge}\n\n")
+                  md.write(f"> **{passed} passed** &nbsp;|&nbsp; **{failed} failed** &nbsp;|&nbsp; **{total} total**\n\n")
+                  md.write("| Status | Test Case | Time |\n")
+                  md.write("|--------|-----------|-----:|\n")
+                  for r in results:
+                      icon = "\U0001f7e2" if r["status"] == "passed" else "\U0001f534"
+                      md.write(f"| {icon} | `{r['name']}` | {r['time']:.3f}s |\n")
+
+          sys.exit(0 if overall_ok else 1)
+          EOF
