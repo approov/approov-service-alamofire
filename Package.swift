@@ -3,7 +3,7 @@
 import Foundation
 import PackageDescription
 // Release tag
-let releaseTAG = "3.5.5"
+let releaseTAG = "3.5.6"
 // SDK package version (used for both iOS and watchOS)
 let sdkVersion: Version = "3.5.3"
 let useMiniSDK = ProcessInfo.processInfo.environment["APPROOV_USE_MINI_SDK"] == "1"

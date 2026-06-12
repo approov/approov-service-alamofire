@@ -5,6 +5,25 @@ All notable changes to this package will be documented in this file.
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
 
+## [3.5.6] - 2026-06-12
+
+### Added
+- `initialize(config:comment:)` now accepts an optional `comment` parameter forwarded to the native SDK, supporting `options:` startup flags and `reinit` flows.
+- Bypass mode: passing an empty `config` string initializes the service layer without enabling the native Approov SDK; a subsequent call with a valid config upgrades to protected mode.
+- `isInitialized()` public API exposing service-layer initialization state (distinct from `isApproovEnabled()`).
+- `SECURITY.md` with version support table and vulnerability reporting instructions.
+- GitHub Actions CI workflow (`build_and_test.yml`) for automated builds and mini-SDK contract tests.
+- Mini-SDK integration tests covering §1 initialization scenarios: valid config, empty config, empty→valid upgrade, valid→empty (ignored), same-config reinit, different-config rejection with state preservation, mutator reset, and SDK method guards in bypass mode.
+
+### Changed
+- Commit-last initialization pattern: service-layer state is only modified after the SDK confirms success, preserving the current operating mode on failure.
+- Valid-then-empty guard: once initialized with a valid config, subsequent empty-config calls are silently ignored (no downgrade from protected to bypass mode).
+- Trust manager performs OS-level certificate validation (`performDefaultValidation`) even in bypass mode; dynamic pinning skipped when SDK is not enabled.
+
+### Fixed
+- Removed stale Android/OkHttpClient reference from `ApproovService.swift` doc comment.
+- Corrected grammar and clarified supported version table in `SECURITY.md`.
+
 ## [3.5.5] - 2026-03-06
 
 ### Fixed
