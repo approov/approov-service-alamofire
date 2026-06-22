@@ -5,6 +5,14 @@ All notable changes to this package will be documented in this file.
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
 
+## [3.5.7] - 2026-06-22
+
+### Fixed
+- Message signing now conforms to the cross-layer fail-open policy (core-project-approov#564). An unavailable account (HS256) signature, an ASN.1/DER decode failure of an ES256 signature, and a header/signature serialization failure now log at error level and proceed **unsigned** instead of aborting the request. Only a required body digest that cannot be generated and an unsupported signing algorithm still fail closed; the backend remains the enforcement point for message signatures.
+
+### Changed
+- README rewritten to the standard GitHub layout: shields.io badge row (Swift / iOS / SwiftPM / CocoaPods / Message Signing RFC 9421 / CI build), quickstart sections, and a guarded `initialize()` example (try/catch, `isApproovEnabled()` confirmation, device-ID + app session/correlation id logging, empty-config bypass fallback).
+
 ## [3.5.6] - 2026-06-12
 
 ### Added
