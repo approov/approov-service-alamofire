@@ -3,6 +3,7 @@ name: Build and Test
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build-and-test:
@@ -198,16 +199,75 @@ jobs:
           EOF
 
   # ---------------------------------------------------------------------------
-  # Automatic release tagging (main only). The CHANGELOG top entry drives the
-  # version, which is stamped in lock-step into BOTH package manifests — the
-  # SwiftPM Package.swift (releaseTAG) and the CocoaPods podspec (s.version) —
-  # plus the runtime user-property string, before the release commit is tagged.
-  # main itself keeps the "dev" placeholders; each release tag carries the
-  # stamped version.
+  # Release placeholder check (verification ONLY — never tags).
+  #
+  # On every push / PR this asserts that:
+  #   - CHANGELOG.md has a top version header (## [x.y.z]); and
+  #   - the "dev" release placeholders are present, so branches cut from main
+  #     inherit them: Package.swift releaseTAG = "dev", every root .podspec
+  #     s.version = "dev", and the setUserProperty telemetry string approov-service-alamofire/dev.
+  # Tagging is a SEPARATE, manual step (the release job below), so any issue
+  # found after merge but before tagging can still be fixed on main first.
   # ---------------------------------------------------------------------------
-  tag-release:
+  verify-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Verify CHANGELOG entry and dev placeholders
+        run: |
+          set -uo pipefail
+          VERSION=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+') || true
+          if [ -z "$VERSION" ]; then
+            echo "::error::No version header (## [x.y.z]) found in CHANGELOG.md"
+            exit 1
+          fi
+          echo "CHANGELOG top version: $VERSION"
+          fail=0
+
+          if ! grep -qF 'releaseTAG = "dev"' Package.swift; then
+            echo "::error::Package.swift is missing the releaseTAG = \"dev\" placeholder (must stay in main)"
+            grep -nE 'releaseTAG[[:space:]]*=' Package.swift || true
+            fail=1
+          fi
+
+          SRC="Sources/ApproovSession/ApproovService.swift"
+          if ! grep -qF "approov-service-alamofire/dev" "$SRC"; then
+            echo "::error::$SRC is missing the approov-service-alamofire/dev telemetry placeholder (must stay in main)"
+            grep -nE 'setUserProperty' "$SRC" || true
+            fail=1
+          fi
+
+          for p in *.podspec; do
+            [ -e "$p" ] || continue
+            if ! grep -qE '\.version[[:space:]]*=[[:space:]]*"dev"' "$p"; then
+              echo "::error::$p is missing the s.version = \"dev\" placeholder (must stay in main)"
+              grep -nE '\.version[[:space:]]*=' "$p" || true
+              fail=1
+            fi
+          done
+
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::Release placeholders missing. main must keep the dev placeholders so branches inherit them; the release job stamps them at tag time."
+            exit 1
+          fi
+          echo "OK: CHANGELOG version $VERSION present and dev placeholders intact. Tagging is manual (Actions -> Release)."
+
+  # ---------------------------------------------------------------------------
+  # Manual release (workflow_dispatch ONLY — the single place that tags).
+  #
+  # Trigger from the Actions tab against main once main is known good. Gated on
+  # build-and-test so a release never tags failing code. It stamps the CHANGELOG
+  # version in lock-step into the dev placeholders (Package.swift releaseTAG,
+  # every root .podspec s.version, and the approov-service-alamofire/dev telemetry string),
+  # commits "Release version <x.y.z>", and tags THAT commit. main keeps the dev
+  # placeholders (the release commit is not pushed to main, only the tag ref);
+  # the tag carries the stamped version. Skipped if the tag already exists.
+  # ---------------------------------------------------------------------------
+  release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     needs: build-and-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -228,48 +288,46 @@ jobs:
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version extracted from CHANGELOG.md is: $VERSION"
 
-      - name: Create and Push Tag
+      - name: Stamp version, commit and tag
         run: |
+          set -uo pipefail
           VERSION="${{ steps.get-version.outputs.VERSION }}"
 
-          # Skip if the tag already exists (no new release in the CHANGELOG).
           if git fetch origin "refs/tags/$VERSION" --quiet 2>/dev/null; then
             echo "Tag $VERSION already exists. Skipping tagging."
             exit 0
           fi
 
-          echo "Tag $VERSION does not exist. Verifying dev placeholder..."
-          FILE="Sources/ApproovSession/ApproovService.swift"
-          if ! grep -q 'approov-service-alamofire/dev' "$FILE"; then
-            echo "::error::Could not find 'approov-service-alamofire/dev' in $FILE"
+          SRC="Sources/ApproovSession/ApproovService.swift"
+          if ! grep -qF "approov-service-alamofire/dev" "$SRC"; then
+            echo "::error::Could not find 'approov-service-alamofire/dev' placeholder in $SRC"
             exit 1
           fi
 
-          echo "Stamping version $VERSION into the SwiftPM and CocoaPods package files..."
-          # 1. Runtime user-property string (telemetry)
-          perl -pi -e "s|approov-service-alamofire/dev|approov-service-alamofire/$VERSION|g" "$FILE"
-          # 2. SwiftPM: Package.swift releaseTAG marker
+          echo "Stamping version $VERSION into manifests and telemetry..."
+          perl -pi -e "s|approov-service-alamofire/dev|approov-service-alamofire/$VERSION|g" "$SRC"
           perl -pi -e "s|releaseTAG = \"dev\"|releaseTAG = \"$VERSION\"|g" Package.swift
-          # 3. CocoaPods: every podspec — the s.version literal and any dev user-property string
-          shopt -s nullglob
           for PODSPEC in *.podspec; do
+            [ -e "$PODSPEC" ] || continue
             echo "Stamping version $VERSION into $PODSPEC..."
-            perl -pi -e "s|(\bs(?:pec)?\.version\s*=\s*['\"])[^'\"]*(['\"])|\${1}$VERSION\${2}|g" "$PODSPEC"
-            perl -pi -e "s|approov-service-alamofire/dev|approov-service-alamofire/$VERSION|g" "$PODSPEC"
+            perl -pi -e "s|(\bs(?:pec)?\.version\s*=\s*['\"])dev(['\"])|\${1}$VERSION\${2}|g" "$PODSPEC"
           done
-          shopt -u nullglob
 
-          # Defensive: refuse to tag if any package file still carries the dev placeholder.
-          if grep -q 'releaseTAG = "dev"' Package.swift || grep -Eq 's\.version[[:space:]]*=[[:space:]]*"dev"' ./*.podspec; then
+          # Defensive: refuse to tag if any dev placeholder survived.
+          leftover=0
+          grep -q 'releaseTAG = "dev"' Package.swift && leftover=1
+          grep -qF "approov-service-alamofire/dev" "$SRC" && leftover=1
+          for PODSPEC in *.podspec; do
+            [ -e "$PODSPEC" ] || continue
+            grep -Eq 's\.version[[:space:]]*=[[:space:]]*"dev"' "$PODSPEC" && leftover=1
+          done
+          if [ "$leftover" -ne 0 ]; then
             echo "::error::A dev placeholder was not replaced; aborting tag."
             exit 1
           fi
 
-          echo "Configuring git and committing release modifications..."
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git commit -am "Release version $VERSION"
-
-          echo "Creating and pushing tag $VERSION..."
           git tag "$VERSION"
           git push origin "$VERSION"
