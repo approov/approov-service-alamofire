@@ -128,13 +128,20 @@ public class ApproovDefaultMessageSigning: ApproovServiceMutator {
                 throw ApproovError.permanentError(message: "Unsupported algorithm identifier: \(alg ?? "unknown")")
             }
 
+            // Build the Signature-Input component value up-front, OUTSIDE the fail-open block. A
+            // throw here means the signature parameters themselves are malformed (an unsupported
+            // component parameter type) — a developer misconfiguration of the same class as an
+            // unsupported algorithm, so it fails closed and surfaces in development rather than
+            // silently shipping every request unsigned.
+            let componentValue = try params.toComponentValue()
+
             // Message signing is fail-open from here. Any failure to build the signature base,
             // obtain/decode the SDK signature (install or account), decode the ES256 ASN.1/DER
             // signature, or serialize the headers is logged at error level and the request proceeds
             // UNSIGNED. The backend remains the enforcement point for message signatures, so a
             // missing signature must never abort the request (see core-project-approov#564).
-            // The only fail-closed cases are a required body digest (handled above) and an
-            // unsupported algorithm (checked above).
+            // The only fail-closed cases are a required body digest (handled above), an unsupported
+            // algorithm, and malformed signature parameters (both checked above).
             do {
                 // Build the signature base
                 let baseBuilder = SignatureBaseBuilder(sigParams: params, ctx: provider)
@@ -169,7 +176,7 @@ public class ApproovDefaultMessageSigning: ApproovServiceMutator {
 
                 // Create signature headers
                 guard let sigHeader = try SFV.serializeDictionary(key: sigId, data: signature),
-                      let sigInputHeader = try SFV.serializeDictionary(key: sigId, innerList: params.toComponentValue()) else {
+                      let sigInputHeader = try SFV.serializeDictionary(key: sigId, innerList: componentValue) else {
                     if ApproovService.loggingLevel >= .error {
                         os_log("ApproovService: failed to serialize signature headers, proceeding unsigned", type: .error)
                     }

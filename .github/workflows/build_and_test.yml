@@ -218,7 +218,9 @@ jobs:
       - name: Verify CHANGELOG entry and dev placeholders
         run: |
           set -uo pipefail
-          VERSION=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+') || true
+          # Capture exactly what is inside the top "## [...]" header (supports prerelease /
+          # non-3-part versions and rejects garbage), rather than loosely grepping three groups.
+          VERSION=$(sed -nE 's/^## \[([0-9][0-9A-Za-z.-]*)\].*/\1/p' CHANGELOG.md | head -1) || true
           if [ -z "$VERSION" ]; then
             echo "::error::No version header (## [x.y.z]) found in CHANGELOG.md"
             exit 1
@@ -280,7 +282,9 @@ jobs:
       - name: Extract Version from CHANGELOG
         id: get-version
         run: |
-          VERSION=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+') || true
+          # Capture exactly what is inside the top "## [...]" header (supports prerelease /
+          # non-3-part versions and rejects garbage), rather than loosely grepping three groups.
+          VERSION=$(sed -nE 's/^## \[([0-9][0-9A-Za-z.-]*)\].*/\1/p' CHANGELOG.md | head -1) || true
           if [ -z "$VERSION" ]; then
             echo "::error::Could not find a version header (## [x.y.z]) in CHANGELOG.md"
             exit 1
@@ -293,7 +297,11 @@ jobs:
           set -uo pipefail
           VERSION="${{ steps.get-version.outputs.VERSION }}"
 
-          if git fetch origin "refs/tags/$VERSION" --quiet 2>/dev/null; then
+          # --exit-code: 0 if the tag exists on origin, 2 if it is absent. Distinguishes
+          # "already released" from a transient fetch error far better than `git fetch`,
+          # which returns non-zero for both. A genuine duplicate is also caught later by
+          # the failing `git push` (the commit/tag/push chain aborts on any failure).
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
             echo "Tag $VERSION already exists. Skipping tagging."
             exit 0
           fi
@@ -326,8 +334,18 @@ jobs:
             exit 1
           fi
 
+          # Sanity check: there must be something to stamp. An empty diff here means the
+          # placeholders had already drifted away from "dev"; fail loudly rather than
+          # creating an empty release commit.
+          if git diff --quiet; then
+            echo "::error::No changes to stamp — manifests/telemetry did not contain the dev placeholders."
+            exit 1
+          fi
+
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -am "Release version $VERSION"
-          git tag "$VERSION"
-          git push origin "$VERSION"
+          # Chain with && (this block runs without `set -e`): a failed commit must NOT
+          # fall through to tag/push the un-stamped HEAD and report the job as green.
+          git commit -am "Release version $VERSION" \
+            && git tag "$VERSION" \
+            && git push origin "$VERSION"
