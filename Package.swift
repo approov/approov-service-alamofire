@@ -2,9 +2,10 @@
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 import Foundation
 import PackageDescription
-// Release tag — "dev" for local/CI builds; replaced with the CHANGELOG version by the
-// tag-release CI job at release time (in lock-step with the podspec and the user-property string).
-let releaseTAG = "dev"
+// Release tag -- must match the top CHANGELOG entry, the podspec s.version and
+// the runtime user-property string. Bump all three in a PR; release.yml then tags
+// main at this version.
+let releaseTAG = "3.5.7"
 // SDK package version (used for both iOS and watchOS)
 let sdkVersion: Version = "3.5.3"
 let useMiniSDK = ProcessInfo.processInfo.environment["APPROOV_USE_MINI_SDK"] == "1"

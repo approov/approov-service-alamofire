@@ -1,0 +1,75 @@
+name: Release Current Main Branch
+
+# Manual release (workflow_dispatch ONLY -- the single place that tags).
+#
+# Run this from the Actions tab against main once main is known good (code is
+# already built and tested on every push). It NEVER pushes a commit to the
+# protected main branch -- it only creates a tag, so the default GITHUB_TOKEN is
+# enough (no PAT / ruleset bypass required). It:
+#   1. reads the top CHANGELOG version (## [x.y.z]);
+#   2. refuses to proceed if that version is already tagged (i.e. someone forgot
+#      to add a new CHANGELOG entry for this release);
+#   3. verifies main already carries that exact version in lock-step in
+#      Package.swift (releaseTAG), every root .podspec (s.version) and the
+#      approov-service-alamofire/<version> telemetry string -- the version is
+#      bumped beforehand via a normal PR, not by CI; and
+#   4. tags main's HEAD with the version and pushes the tag.
+#
+# Because the tag points at main's HEAD, the released commit always belongs to a
+# branch (no orphan-commit banner).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Validate version and tag main
+        run: |
+          set -uo pipefail
+          SEMVER='[0-9]+\.[0-9]+\.[0-9]+'
+          SRC="Sources/ApproovSession/ApproovService.swift"
+
+          VERSION=$(grep -m1 -oE "^## \[$SEMVER\]" CHANGELOG.md | grep -oE "$SEMVER") || true
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not find a version header (## [x.y.z]) in CHANGELOG.md"
+            exit 1
+          fi
+
+          git fetch --tags --quiet
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            echo "::error::CHANGELOG top version $VERSION is already tagged. Did you forget to add a new CHANGELOG entry for this release?"
+            exit 1
+          fi
+
+          # main must already carry $VERSION in all three locations (bumped via PR
+          # before releasing). This job only tags -- it never pushes to main.
+          fail=0
+          grep -qE "releaseTAG[[:space:]]*=[[:space:]]*\"$VERSION\"" Package.swift \
+            || { echo "::error::Package.swift releaseTAG is not $VERSION"; fail=1; }
+          grep -qF "approov-service-alamofire/$VERSION" "$SRC" \
+            || { echo "::error::$SRC telemetry is not approov-service-alamofire/$VERSION"; fail=1; }
+          for PODSPEC in *.podspec; do
+            [ -e "$PODSPEC" ] || continue
+            grep -qE "\.version[[:space:]]*=[[:space:]]*\"$VERSION\"" "$PODSPEC" \
+              || { echo "::error::$PODSPEC s.version is not $VERSION"; fail=1; }
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::main is not stamped to $VERSION. Open a PR bumping Package.swift releaseTAG, every *.podspec s.version and the telemetry string to $VERSION (matching the top CHANGELOG entry), merge it, then re-run this release."
+            exit 1
+          fi
+
+          git tag "$VERSION"
+          git push origin "$VERSION"
+          echo "Tagged main @ $(git rev-parse --short HEAD) as $VERSION"

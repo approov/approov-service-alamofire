@@ -242,8 +242,9 @@ public class ApproovService {
             serviceIsInitialized = true
             if !config.isEmpty {
                 approovEnabled = true
-                // "dev" is a placeholder replaced with the release version by the tag-release CI job.
-                Approov.setUserProperty("approov-service-alamofire/dev")
+                // Must match the top CHANGELOG entry (in lock-step with Package.swift releaseTAG
+                // and the podspec s.version); bump all three in a PR before tagging a release.
+                Approov.setUserProperty("approov-service-alamofire/3.5.7")
                 if loggingLevel >= .info {
                     os_log("ApproovService: initialized with Approov protection enabled", type: .info)
                 }
