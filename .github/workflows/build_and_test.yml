@@ -3,6 +3,7 @@ name: Build and Test
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build-and-test:
@@ -196,3 +197,86 @@ jobs:
 
           sys.exit(0 if overall_ok else 1)
           EOF
+
+  # ---------------------------------------------------------------------------
+  # Release readiness check (verification ONLY -- never tags).
+  #
+  # On every push / PR this asserts that the checked-out ref is releasable before
+  # it reaches main:
+  #   - CHANGELOG.md has a top version header (## [x.y.z]);
+  #   - that top version is NOT already tagged (forces a new CHANGELOG entry
+  #     after each release before more release changes land); and
+  #   - Package.swift releaseTAG, every root .podspec s.version, and the
+  #     approov-service-alamofire/<version> telemetry string each carry that
+  #     same top CHANGELOG version (so the checked-out ref is ready to merge
+  #     and be tagged from main).
+  # Tagging is a SEPARATE, manual step: the "Release Current Main Branch"
+  # workflow (release.yml) only verifies and tags main's HEAD -- it never pushes
+  # a commit to main, so the version is bumped here via PR, not by CI.
+  # ---------------------------------------------------------------------------
+  verify-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Verify CHANGELOG entry, tag availability and version consistency
+        run: |
+          set -uo pipefail
+          SEMVER='[0-9]+\.[0-9]+\.[0-9]+'
+
+          VERSION=$(grep -m1 -oE "^## \[$SEMVER\]" CHANGELOG.md | grep -oE "$SEMVER") || true
+          if [ -z "$VERSION" ]; then
+            echo "::error::No version header (## [x.y.z]) found in CHANGELOG.md"
+            exit 1
+          fi
+          echo "CHANGELOG top version: $VERSION"
+          fail=0
+
+          git fetch --tags --quiet
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            echo "::error::CHANGELOG top version $VERSION is already tagged. Add a new top CHANGELOG entry before merging more release changes."
+            fail=1
+          fi
+
+          # Every source location must carry exactly the top CHANGELOG version, so main is
+          # always ready for the release job to tag.
+          PKG=$(grep -m1 -oE "releaseTAG[[:space:]]*=[[:space:]]*\"$SEMVER\"" Package.swift | grep -oE "$SEMVER") || true
+          if [ -z "$PKG" ]; then
+            echo "::error::Package.swift releaseTAG must be an x.y.z version"
+            grep -nE 'releaseTAG[[:space:]]*=' Package.swift || true
+            fail=1
+          elif [ "$PKG" != "$VERSION" ]; then
+            echo "::error::Package.swift releaseTAG ($PKG) must match the top CHANGELOG version ($VERSION)"
+            fail=1
+          fi
+
+          SRC="Sources/ApproovSession/ApproovService.swift"
+          TEL=$(grep -m1 -oE "approov-service-alamofire/$SEMVER" "$SRC" | grep -oE "$SEMVER") || true
+          if [ -z "$TEL" ]; then
+            echo "::error::$SRC must report approov-service-alamofire/<x.y.z>"
+            grep -nE 'setUserProperty' "$SRC" || true
+            fail=1
+          elif [ "$TEL" != "$VERSION" ]; then
+            echo "::error::telemetry version ($TEL) must match the top CHANGELOG version ($VERSION)"
+            fail=1
+          fi
+
+          for p in *.podspec; do
+            [ -e "$p" ] || continue
+            POD=$(grep -m1 -oE "\.version[[:space:]]*=[[:space:]]*\"$SEMVER\"" "$p" | grep -oE "$SEMVER") || true
+            if [ -z "$POD" ]; then
+              echo "::error::$p s.version must be an x.y.z version"
+              grep -nE '\.version[[:space:]]*=' "$p" || true
+              fail=1
+            elif [ "$POD" != "$VERSION" ]; then
+              echo "::error::$p s.version ($POD) must match the top CHANGELOG version ($VERSION)"
+              fail=1
+            fi
+          done
+
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::Release verification failed."
+            exit 1
+          fi
+          echo "OK: CHANGELOG version $VERSION is untagged; source version $PKG is valid and consistent. Tagging is manual (Actions -> Release Current Main Branch)."

@@ -1,6 +1,8 @@
 Pod::Spec.new do |s|
   s.name         = "ApproovSession"
-  s.version      = "3.5.5"
+  # Must match the top CHANGELOG entry (in lock-step with Package.swift releaseTAG
+  # and the runtime user-property string); bump all three in a PR before tagging.
+  s.version      = "3.5.7"
   s.summary      = "Approov mobile attestation SDK"
   s.description  = <<-DESC
     Approov SDK integrates security attestation and secure string fetching for both iOS and watchOS apps.
