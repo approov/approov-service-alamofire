@@ -201,13 +201,15 @@ jobs:
   # ---------------------------------------------------------------------------
   # Release readiness check (verification ONLY -- never tags).
   #
-  # On every push / PR this asserts that main is always in a releasable shape:
+  # On every push / PR this asserts that the checked-out ref is releasable before
+  # it reaches main:
   #   - CHANGELOG.md has a top version header (## [x.y.z]);
   #   - that top version is NOT already tagged (forces a new CHANGELOG entry
   #     after each release before more release changes land); and
   #   - Package.swift releaseTAG, every root .podspec s.version, and the
   #     approov-service-alamofire/<version> telemetry string each carry that
-  #     same top CHANGELOG version (so main is always ready to tag).
+  #     same top CHANGELOG version (so the checked-out ref is ready to merge
+  #     and be tagged from main).
   # Tagging is a SEPARATE, manual step: the "Release Current Main Branch"
   # workflow (release.yml) only verifies and tags main's HEAD -- it never pushes
   # a commit to main, so the version is bumped here via PR, not by CI.

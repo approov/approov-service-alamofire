@@ -127,4 +127,60 @@ final class ApproovAFSessionMiniSDKTests: XCTestCase {
         XCTAssertThrowsError(try ApproovService.fetchSecureString(key: "test", newDef: nil))
         XCTAssertThrowsError(try ApproovService.fetchCustomJWT(payload: "{}"))
     }
+
+    // MARK: - Message signing fail-open
+
+    func testAccountMessageSigningUnavailableProceedsUnsigned() throws {
+        ApproovService.resetForTesting()
+        try ApproovService.initialize(config: "", comment: nil)
+
+        let signer = ApproovDefaultMessageSigning()
+            .setDefaultFactory(SignatureParametersFactory().setUseAccountMessageSigning())
+        let signed = try signer.handleInterceptorProcessedRequest(approovTokenRequest(), changes: signingChanges())
+
+        assertUnsigned(signed)
+    }
+
+    func testInstallMessageSigningUnavailableProceedsUnsigned() throws {
+        ApproovService.resetForTesting()
+        try ApproovService.initialize(config: validInitialConfig, comment: "options:no-install-key")
+
+        let signer = ApproovDefaultMessageSigning()
+            .setDefaultFactory(SignatureParametersFactory().setUseInstallMessageSigning())
+        let signed = try signer.handleInterceptorProcessedRequest(approovTokenRequest(), changes: signingChanges())
+
+        assertUnsigned(signed)
+    }
+
+    func testSignatureBaseFailureProceedsUnsigned() throws {
+        let baseParameters = SignatureParameters()
+            .addComponentIdentifier("x-required-header")
+        let signer = ApproovDefaultMessageSigning()
+            .setDefaultFactory(SignatureParametersFactory()
+                .setBaseParameters(baseParameters)
+                .setUseAccountMessageSigning())
+
+        let signed = try signer.handleInterceptorProcessedRequest(approovTokenRequest(), changes: signingChanges())
+
+        assertUnsigned(signed)
+    }
+
+    private func approovTokenRequest() -> URLRequest {
+        var request = URLRequest(url: URL(string: "https://api.example.com/protected")!)
+        request.httpMethod = "GET"
+        request.setValue("token", forHTTPHeaderField: ApproovService.getApproovTokenHeader())
+        return request
+    }
+
+    private func signingChanges() -> ApproovRequestMutations {
+        let changes = ApproovRequestMutations()
+        changes.setTokenHeaderKey(ApproovService.getApproovTokenHeader())
+        return changes
+    }
+
+    private func assertUnsigned(_ request: URLRequest) {
+        XCTAssertNil(request.value(forHTTPHeaderField: "Signature"))
+        XCTAssertNil(request.value(forHTTPHeaderField: "Signature-Input"))
+        XCTAssertEqual(request.value(forHTTPHeaderField: ApproovService.getApproovTokenHeader()), "token")
+    }
 }

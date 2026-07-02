@@ -197,10 +197,10 @@ public class ApproovDefaultMessageSigning: ApproovServiceMutator {
                 if params.isDebugMode() {
                     let digest = ApproovDefaultMessageSigning.sha256(data: Data(message.utf8))
                     // The optional debug digest header must not drop a valid signature on failure.
-                    if let sigBaseDigestHeader = (try? SFV.serializeDictionary(key: "sha-256", data: digest)) ?? nil {
+                    if let sigBaseDigestHeader = try? SFV.serializeDictionary(key: "sha-256", data: digest) {
                         signedRequest.addValue(sigBaseDigestHeader, forHTTPHeaderField: "Signature-Base-Digest")
                     } else if ApproovService.loggingLevel >= .debug {
-                        os_log("ApproovService: Failed to get digest algorithm - no debug entry", type: .debug)
+                        os_log("ApproovService: failed to serialize Signature-Base-Digest debug header", type: .debug)
                     }
                 }
 
